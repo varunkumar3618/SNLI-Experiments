@@ -51,7 +51,7 @@ class SumOfWords(Model):
             prem_embed = self._get_embedding(
                 self.prem, [self.batch_size, self.seq_len, self.embed_size])
             hyp_embed = self._get_embedding(
-                self.prem, [self.batch_size, self.seq_len, self.embed_size])
+                self.hyp, [self.batch_size, self.seq_len, self.embed_size])
 
             prem_sow = tf.reduce_sum(prem_embed, axis=1)
             hyp_sow = tf.reduce_sum(hyp_sow, axis=1)
