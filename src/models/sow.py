@@ -3,7 +3,7 @@ import tensorflow as tf
 from src.models.model import Model
 from src.utils.ops import linear, train_op
 from src.utils.vocab import Vocab
-from src.utils.wvecs import get_word_vectors
+from src.utils.wvecs import GloveWordVectors
 
 
 class SumOfWords(Model):
@@ -19,7 +19,8 @@ class SumOfWords(Model):
         self.learning_rate = config["learning_rate"]
         self.vocab = Vocab(vocab_file=config["vocab_file"], dataset_path=config["dataset_path"],
             max_vocab_size=config["vocab_size"])
-        self.pretrained_embeddings = get_pretrained_embeddings(config["word_vectors"])
+        self.pretrained_embeddings = GloveWordVectors(tokens=self.vocab.token_id, \
+            glove_file=config["glove_file"]).word_vectors
 
     def add_placeholders(self):
         self.prem = tf.placeholder(tf.int32, [self.batch_size, self.seq_len])
