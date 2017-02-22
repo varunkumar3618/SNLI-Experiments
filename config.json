@@ -1,0 +1,23 @@
+{
+    "splits": ["train", "test", "dev"],
+    "data_dir": "data",
+    "snli_dir": "snli_1.0",
+    "glove_dir": "glove.6B",
+    "vocab_file": "vocab.txt",
+    "max_vocab_size": 10000,
+    "jsonl_split_files": {
+        "train": "snli_1.0_train.jsonl",
+        "test": "snli_1.0_test.jsonl",
+        "dev": "snli_1.0_dev.jsonl"
+    },
+    "tf_split_files": {
+        "train": "snli_1.0_train.tfrecords",
+        "test": "snli_1.0_test.tfrecords",
+        "dev": "snli_1.0_dev.tfrecords"
+    },
+    "label_to_int": {
+        "entailment": 0,
+        "neutral": 1,
+        "contradiction": 2
+    }
+}
