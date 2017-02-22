@@ -9,41 +9,23 @@ GloVe data: http://nlp.stanford.edu/data/glove.6B.zip
 
 """
 
-class GloveWordVectors(object):
+def get_glove_vectors(config, vocab):
+    glove_dir = os.path.join(config.data_dir, config.glove_dir)
+    dim = config.model.wvec_dim
+    glove_file = os.path.join(glove_dir, "glove.6B.%sd.txt" % dim)
+    matrix = np.zeros([vocab.size(), dim])
 
-    DEFAULT_FILE_PATH = "utils/datasets/glove.6B.50d.txt"
-
-    def __init__(self, glove_file):
-        self.word_vectors = np.zeros()  # initialized to an embedding matrix
-        self.glove_file = glove_file
-
-        if os.path.isfile(glove_file) and os.path.getsize(glove_file) > 0:
-            self.load_vocab_from_file(glove_file)
-        else:
-            raise Exception("Must provide a pretrained GloVe file. See http://nlp.stanford.edu/data/glove.6B.zip.")
-
-
-    """
-    Loads pretrained GloVe vectors into memory.
-
-    args:
-        tokens - The mapping from token to idx for every token in the vocabulary. Must be incremental.
-        filepath - The path of the file containing the dumped pretrained GloVe vectors.
-        dimensions - The dimensionality of a word vector, as given by the GloVe file.
-    """
-    def load_vocab_from_file(tokens, filepath=DEFAULT_FILE_PATH, dimensions=50):
-        self.word_vectors = np.zeros((len(tokens), dimensions))
-        with open(filepath) as ifs:
-            for line in ifs:
-                line = line.strip()
-                if not line:
-                    continue
-                row = line.split()
-                token = row[0]
-                if token not in tokens:
-                    continue
-                data = [float(x) for x in row[1:]]
-                if len(data) != dimensions:
-                    raise RuntimeError("wrong number of dimensions")
-                self.word_vectors[tokens[token]] = np.asarray(data)
-        print "Done.",len(self.word_vectors), " GloVe vectors loaded!"
+    with open(glove_file) as ifs:
+        for line in ifs:
+            line = line.strip()
+            if not line:
+                continue
+            row = line.split()
+            token = row[0]
+            if not vocab.has_token(token):
+                continue
+            data = [float(x) for x in row[1:]]
+            if len(data) != dim:
+                raise RuntimeError("wrong number of dimensions")
+            matrix[vocab.id_for_token(token)] = np.asarray(data)
+    return matrix

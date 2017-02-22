@@ -5,30 +5,42 @@ from collections import Counter
 from nltk.tokenize import word_tokenize
 
 
-
 class Vocab(object):
 
-    def __init__(self, vocab_file=".", dataset_path=None, max_vocab_size=10000):
+    def __init__(self, config):
+        data_dir = config.data_dir
+        snli_dir = os.path.join(data_dir, config.snli_dir)
+        vocab_file = os.path.join(data_dir, config.vocab_file)
+        self.vocab_file = vocab_file
+        max_vocab_size = config.max_vocab_size
+
         self.token_id = {}
         self.id_token = {}
         self.PAD_ID = 0
         self.UNK_ID = 1
         self.seq = 2
-        self.vocab_file = vocab_file
 
-        if os.path.isfile(vocab_file) and os.path.getsize(vocab_file) > 0:
-            self.load_vocab_from_file(vocab_file)
-        elif dataset_path:
-            self.create_vocab(dataset_path, vocab_file, max_vocab_size)
+        if os.path.isfile(vocab_file) and self.has_correct_size(vocab_file, max_vocab_size):
             self.load_vocab_from_file(vocab_file)
         else:
-            raise Exception(
-                "must provide either an already constructed vocab file, or a dataset to build it from.")
+            self.create_vocab(snli_dir, vocab_file, max_vocab_size)
+            self.load_vocab_from_file(vocab_file)
+
+    def has_correct_size(self, vocab_file, max_vocab_size):
+        try:
+            with open(vocab_file, "r") as f:
+                size = int(f.readline())
+        except:
+            return False
+        return size == max_vocab_size
 
     def load_vocab_from_file(self, vocab_file):
         print("loading vocab from {}".format(vocab_file))
 
-        for line in open(vocab_file, "r"):
+        for i, line in enumerate(open(vocab_file, "r")):
+            if i == 0:
+                # Skip the max vocab size line
+                continue
             token, idx = line.strip().split("\t")
             idx = int(idx)
             assert token not in self.token_id, "dup entry for token [%s]" % token
@@ -58,6 +70,7 @@ class Vocab(object):
         word_to_id = dict(zip(words[:max_vocab_size], range(max_vocab_size)))
 
         with open(vocab_path, "w") as file:
+            file.write("{}\n".format(max_vocab_size))
             for word, id in word_to_id.items():
                 file.write("{}\t{}\n".format(word, id))
 
@@ -80,6 +93,9 @@ class Vocab(object):
             self.id_token[self.seq] = token
             self.seq += 1
             return self.seq - 1
+
+    def has_token(self, token):
+        return token in self.token_id
 
     def ids_for_tokens(self, tokens, update=True):
         return [self.id_for_token(t, update) for t in tokens]
