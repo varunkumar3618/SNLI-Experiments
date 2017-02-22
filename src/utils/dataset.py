@@ -49,9 +49,11 @@ def convert_to_tensorflow(config, vocab):
 
 def load_split(config, split):
     """Loads a single split from its TFRecords file"""
+    snli_dir = os.path.join(config.data_dir, config.snli_dir)
     tf_split_files = config.tf_split_files
+    filepath = os.path.join(snli_dir, tf_split_files[split])
 
-    filename_queue = tf.train.string_input_producer([tf_split_files[split]])
+    filename_queue = tf.train.string_input_producer([filepath])
     reader = tf.TFRecordReader()
     _, serialized_example = reader.read(filename_queue)
     features = tf.parse_single_example(
@@ -62,10 +64,23 @@ def load_split(config, split):
             "sentence2": tf.VarLenFeature(tf.int64)
         }
     )
+    return [features["label"], features["sentence1"].values, features["sentence2"].values]
 
+def make_queue(config, data_split):
+    return tf.train.batch(data_split, config.train.batch_size, num_threads=config.train.num_threads,
+                          capacity=config.train.capacity, allow_smaller_final_batch=True,
+                          dynamic_pad=True)
+
+def make_shuffle_queue(config, data_split):
+    return make_queue(config, data_split)
+    # return tf.train.shuffle_batch(data_split, config.train.batch_size, config.train.capacity,
+    #                               config.train.min_after_dequeue, num_threads=config.train.num_threads,
+    #                               allow_smaller_final_batch=True)
 
 def load_data(config):
     """Loads data from the TFRecords files"""
-    splits = config.splits
-
-    return {split: load_split(config, split) for split in splits}
+    return {
+        "train": make_shuffle_queue(config, load_split(config, "train")),
+        "dev": make_queue(config, load_split(config, "dev")),
+        "test": make_queue(config, load_split(config, "test"))
+    }
