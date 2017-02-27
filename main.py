@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 
 from src.models.sow import SumOfWords
+from src.models.attention import AttentionModel
 from src.utils.dataset import Dataset
 from src.utils.vocab import Vocab
 from src.utils.wvecs import get_glove_vectors
@@ -24,6 +25,7 @@ flags.DEFINE_integer("max_seq_len", 100, "The maximum length of a sentence. Sent
 flags.DEFINE_integer("word_embed_dim", 50, "The dimension of the embedding matrix.")
 flags.DEFINE_integer("hidden_size", 100, "The size of the hidden layer, applicable to some models.")
 flags.DEFINE_boolean("update_embeddings", False, "Whether the word vectors should be updated")
+flags.DEFINE_boolean("use_peepholes", True, "Whether to use peephole connections, applicable to LSTM models.")
 
 # Training
 flags.DEFINE_integer("batch_size", 100, "The batch size.")
@@ -72,6 +74,14 @@ def main(_):
                 embedding_matrix=embedding_matrix,
                 update_embeddings=FLAGS.update_embeddings,
                 hidden_size=FLAGS.hidden_size,
+                max_seq_len=FLAGS.max_seq_len
+            )
+        elif FLAGS.model == "Attention":
+            model = AttentionModel(
+                embedding_matrix=embedding_matrix,
+                update_embeddings=FLAGS.update_embeddings,
+                hidden_size=FLAGS.hidden_size,
+                use_peepholes=FLAGS.use_peepholes,
                 max_seq_len=FLAGS.max_seq_len
             )
         else:
