@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 
 from src.models.sow import SumOfWords
 from src.utils.dataset import Dataset
@@ -33,16 +34,31 @@ flags.DEFINE_boolean("train", True, "Whether to train or test the model.")
 FLAGS = flags.FLAGS
 
 def run_train_epoch(sess, model, dataset, epoch_num):
+    print "="*79
+    print "Epoch: %s" % epoch_num
     prog = Progbar(target=dataset.split_num_batches("train", FLAGS.batch_size))
     for i, batch in enumerate(dataset.get_shuffled_iterator("train", FLAGS.batch_size)):
         loss = model.train_on_batch(sess, *batch)
         prog.update(i + 1, [("train loss", loss)])
+    print "="*79
 
 def run_eval_epoch(sess, model, dataset, split):
+    batch_sizes = []
+    accuracies = []
+
+    print "-"*79
+    print "Evaluating on %s." % split
     prog = Progbar(target=dataset.split_num_batches(split, FLAGS.batch_size))
     for i, batch in enumerate(dataset.get_iterator(split, FLAGS.batch_size)):
-        _, loss = model.evaluate_on_batch(sess, *batch)
+        acc, loss = model.evaluate_on_batch(sess, *batch)
         prog.update(i + 1, [("%s loss" % split, loss)])
+
+        batch_sizes.append(batch[0].shape[0])
+        accuracies.append(acc)
+
+    accuracy = np.average(accuracies, weights=batch_sizes)
+    print "Accuracy: %s" % accuracy
+    print "-"*79
 
 def main(_):
     with tf.Graph().as_default():
