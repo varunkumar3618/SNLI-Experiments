@@ -17,9 +17,9 @@ rm snli_1.0.zip
 
 # Get 50D GloVe vectors
 if hash wget 2>/dev/null; then
-  wget http://web.stanford.edu/~jamesh93/tmp/glove.6B.zip
+  wget http://nlp.stanford.edu/data/glove.6B.zip
 else
-  curl -O http://web.stanford.edu/~jamesh93/tmp/glove.6B.zip
+  curl -O http://nlp.stanford.edu/data/glove.6B.zip
 fi
 unzip glove.6B.zip
 rm glove.6B.zip
