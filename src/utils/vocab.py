@@ -31,8 +31,6 @@ class Vocab(object):
         return size == max_vocab_size
 
     def load_vocab_from_file(self, vocab_file):
-        print("loading vocab from {}".format(vocab_file))
-
         for i, line in enumerate(open(vocab_file, "r")):
             if i == 0:
                 # Skip the max vocab size line

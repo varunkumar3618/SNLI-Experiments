@@ -21,13 +21,13 @@ class SNLIModel(object):
         See for more information:
         https://www.tensorflow.org/versions/r0.7/api_docs/python/io_ops.html#placeholders
         """
-        self.labels_placeholder = tf.placeholder(tf.int32, shape=[None], name="labels")
-        self.sentence1_placeholder = tf.placeholder(tf.int32, shape=[None, self._max_seq_len], name="sentence1")
-        self.sentence2_placeholder = tf.placeholder(tf.int32, shape=[None, self._max_seq_len], name="sentence2")
+        self.labels_placeholder = tf.placeholder(tf.int64, shape=[None], name="labels")
+        self.sentence1_placeholder = tf.placeholder(tf.int64, shape=[None, self._max_seq_len], name="sentence1")
+        self.sentence2_placeholder = tf.placeholder(tf.int64, shape=[None, self._max_seq_len], name="sentence2")
 
         if self._use_lens:
-            self.sentence1_lens_placeholder = tf.placeholder(tf.int32, shape=[None], name="sentence1_lengths")
-            self.sentence2_lens_placeholder = tf.placeholder(tf.int32, shape=[None], name="sentence2_lengths")
+            self.sentence1_lens_placeholder = tf.placeholder(tf.int64, shape=[None], name="sentence1_lengths")
+            self.sentence2_lens_placeholder = tf.placeholder(tf.int64, shape=[None], name="sentence2_lengths")
 
     def create_feed_dict(self,
                          sentence1_batch, sentence1_lens_batch,
@@ -88,6 +88,16 @@ class SNLIModel(object):
         return tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
             logits=logits, labels=self.labels_placeholder))
 
+    def add_acc_op(self, pred):
+        """Adds Ops for the accuracy to the computational graph.
+
+        Args:
+            pred: A tensor of shape (batch_size, n_classes)
+        Returns:
+            acc: A 0-d tensor (scalar) output
+        """
+        return tf.contrib.metrics.accuracy(pred, self.labels_placeholder)
+
     def add_training_op(self, loss):
         """Sets up the training Ops.
 
@@ -128,6 +138,28 @@ class SNLIModel(object):
         _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
         return loss
 
+    def evaluate_on_batch(self, sess,
+                          sentence1_batch, sentence1_lens_batch,
+                          sentence2_batch, sentence2_lens_batch,
+                          labels_batch):
+        """Obtain the loss and accuracy on a batch of data.
+
+        Args:
+            sess: tf.Session()
+            sentence1_batch: np.ndarray of shape (n_samples, max_len)
+            sentence1_lens_batch: np.ndarray of shape (n_samples)
+            sentence2_batch: np.ndarray of shape (n_samples, max_len)
+            sentence2_lens_batch: np.ndarray of shape (n_samples)
+            labels_batch: np.ndarray of shape (n_samples)
+        Returns:
+            acc: accuracy over the batch (a scalar)
+            loss: loss over the batch (a scalar)
+        """
+        feed = self.create_feed_dict(sentence1_batch, sentence1_lens_batch,
+                                     sentence2_batch, sentence2_lens_batch,
+                                     labels_batch)
+        return sess.run([self.acc_op, self.loss], feed_dict=feed)
+
     def predict_on_batch(self, sess,
                          sentence1_batch, sentence1_lens_batch,
                          sentence2_batch, sentence2_lens_batch):
@@ -152,3 +184,4 @@ class SNLIModel(object):
         self.pred, self.logits = self.add_prediction_op()
         self.loss = self.add_loss_op(self.pred, self.logits)
         self.train_op = self.add_training_op(self.loss)
+        self.acc_op = self.add_acc_op(self.pred)

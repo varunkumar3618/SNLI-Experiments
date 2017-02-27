@@ -1,5 +1,5 @@
 import os
-import json
+import math
 
 import tensorflow as tf
 import pandas as pd
@@ -61,3 +61,9 @@ class Dataset(object):
     def get_shuffled_iterator(self, split, batch_size):
         df = self._dataframes[split]
         return self._make_iterator(df.sample(len(df)), batch_size)
+
+    def split_size(self, split):
+        return len(self._dataframes[split])
+
+    def split_num_batches(self, split, batch_size):
+        return int(math.ceil(float(len(self._dataframes[split]))/batch_size))
