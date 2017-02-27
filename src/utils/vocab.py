@@ -7,12 +7,8 @@ from nltk.tokenize import word_tokenize
 
 class Vocab(object):
 
-    def __init__(self, config):
-        data_dir = config.data_dir
-        snli_dir = os.path.join(data_dir, config.snli_dir)
-        vocab_file = os.path.join(data_dir, config.vocab_file)
+    def __init__(self, snli_dir, vocab_file, max_vocab_size):
         self.vocab_file = vocab_file
-        max_vocab_size = config.max_vocab_size
 
         self.token_id = {}
         self.id_token = {}
@@ -80,7 +76,7 @@ class Vocab(object):
     def size(self):
         return len(self.token_id) + 2  # +1 for UNK & PAD
 
-    def id_for_token(self, token, update=True):
+    def id_for_token(self, token, update=False):
         if token in self.token_id:
             return self.token_id[token]
         elif not update:
@@ -97,8 +93,14 @@ class Vocab(object):
     def has_token(self, token):
         return token in self.token_id
 
-    def ids_for_tokens(self, tokens, update=True):
+    def ids_for_tokens(self, tokens, update=False):
         return [self.id_for_token(t, update) for t in tokens]
+
+    def ids_for_sentence(self, sentence):
+        return self.ids_for_tokens(word_tokenize(sentence.lower()))
+
+    def sentence_for_ids(self, ids):
+        return " ".join(self.tokens_for_ids(ids)).strip()
 
     def token_for_id(self, id):
         if id in self.id_token:

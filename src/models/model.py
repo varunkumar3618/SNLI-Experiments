@@ -1,68 +1,154 @@
-import os
-from itertools import count
-
 import tensorflow as tf
 
-from src.utils.dataset import load_data
-from src.utils.ops import make_train_op, mean_ce_with_logits
-from src.utils.vocab import Vocab
-from src.utils.wvecs import get_glove_vectors
-
 class SNLIModel(object):
-    def __init__(self, config):
-        self.vocab = Vocab(config)
-        self.embedding_matrix = get_glove_vectors(config, self.vocab)
+    """Abstracts a Tensorflow graph for a learning task.
 
-        data = load_data(config)
+    We use various Model classes as usual abstractions to encapsulate tensorflow
+    computational graphs.
+    """
+    def __init__(self, max_seq_len, use_lens):
+        self._max_seq_len = max_seq_len
+        self._use_lens = use_lens
 
-        self.train_labels, self.train_sentence1s, self.train_sentence2s = data["train"]
-        self.dev_labels, self.dev_sentence1s, self.dev_sentence2s = data["dev"]
-        self.test_labels, self.test_sentence1s, self.test_sentence2s = data["test"]
+    def add_placeholders(self):
+        """Adds placeholder variables to tensorflow computational graph.
 
-        with tf.variable_scope("model"):
-            with tf.variable_scope("logits"):
-                self.train_logits = self.build_model(config, self.train_sentence1s, self.train_sentence2s)
-            with tf.variable_scope("logits", reuse=True):
-                self.dev_logits = self.build_model(config, self.dev_sentence1s, self.dev_sentence2s)
-            with tf.variable_scope("logits", reuse=True):
-                self.test_logits = self.build_model(config, self.test_sentence1s, self.test_sentence2s)
+        Tensorflow uses placeholder variables to represent locations in a
+        computational graph where data is inserted.  These placeholders are used as
+        inputs by the rest of the model building and will be fed data during
+        training.
 
-            self.train_loss = mean_ce_with_logits(self.train_logits, self.train_labels)
-            self.train_op = make_train_op(config, self.train_loss)
+        See for more information:
+        https://www.tensorflow.org/versions/r0.7/api_docs/python/io_ops.html#placeholders
+        """
+        self.labels_placeholder = tf.placeholder(tf.int32, shape=[None], name="labels")
+        self.sentence1_placeholder = tf.placeholder(tf.int32, shape=[None, self._max_seq_len], name="sentence1")
+        self.sentence2_placeholder = tf.placeholder(tf.int32, shape=[None, self._max_seq_len], name="sentence2")
 
-            self.dev_loss = mean_ce_with_logits(self.dev_logits, self.dev_labels)
-            self.test_loss = mean_ce_with_logits(self.test_logits, self.test_labels)
+        if self._use_lens:
+            self.sentence1_lens_placeholder = tf.placeholder(tf.int32, shape=[None], name="sentence1_lengths")
+            self.sentence2_lens_placeholder = tf.placeholder(tf.int32, shape=[None], name="sentence2_lengths")
 
-            self.dev_preds = tf.argmax(self.dev_logits, axis=1)
-            self.test_preds = tf.argmax(self.test_logits, axis=1)
+    def create_feed_dict(self,
+                         sentence1_batch, sentence1_lens_batch,
+                         sentence2_batch, sentence2_lens_batch,
+                         labels_batch=None):
+        """Creates the feed_dict for one step of training.
 
-            self.dev_acc, self.dev_acc_update_op\
-                = tf.metrics.accuracy(self.dev_labels, self.dev_preds, weights=tf.ones_like(self.dev_labels))
-            self.test_acc, self.test_acc_update_op\
-                = tf.metrics.accuracy(self.test_labels, self.test_preds, weights=tf.ones_like(self.test_labels))
+        A feed_dict takes the form of:
+        feed_dict = {
+                <placeholder>: <tensor of values to be passed for placeholder>,
+                ....
+        }
 
-        self.logdir = os.path.join(os.path.join(config.data_dir, config.log_dir), config.model.name)
+        If labels_batch is None, then no labels are added to feed_dict.
 
-    def build_model(self, config, sentence1, sentence2, reuse=False):
-        raise NotImplementedError("This function should return predictions and logits for the two sentences.")
+        Hint: The keys for the feed_dict should be a subset of the placeholder
+                    tensors created in add_placeholders.
+        Args:
+            sentence1_batch: np.ndarray of shape (n_samples, max_len)
+            sentence1_lens_batch: np.ndarray of shape (n_samples)
+            sentence2_batch: np.ndarray of shape (n_samples, max_len)
+            sentence2_lens_batch: np.ndarray of shape (n_samples)
+            labels_batch: np.ndarray of shape (n_samples)
+        Returns:
+            feed_dict: The feed dictionary mapping from placeholders to values.
+        """
+        feed_dict = {}
+        feed_dict[self.sentence1_placeholder] = sentence1_batch
+        feed_dict[self.sentence2_placeholder] = sentence2_batch
 
-    def train(self):
-        sv = tf.train.Supervisor(logdir=self.logdir)
-        with sv.managed_session() as sess:
-            print "="*79
-            print "="*79
-            for step in count():
-                _, loss = sess.run([self.train_op, self.train_loss])
-                print "Step: %s. Loss: %s" % (step, loss)
+        if self._use_lens:
+            feed_dict[self.sentence1_lens_placeholder] = sentence1_lens_batch
+            feed_dict[self.sentence2_lens_placeholder] = sentence2_lens_batch
 
-                if step % 10000 == 0:
-                    print "="*79
-                    print "="*79
-                    acc, loss, _ = sess.run([self.dev_acc, self.dev_loss, self.dev_acc_update_op])
-                    print "Step: %s. Dev loss: %s. Dev accuracy: %s" % (step, loss, acc)
-                    print "="*79
-                    print "="*79
+        if labels_batch is not None:
+            feed_dict[self.labels_placeholder] = labels_batch
 
-    def test(self):
-        acc, loss = sess.run([self.test_acc, self.test_loss])
-        print "Accuracy: %s, loss: %s" % (acc, loss)
+        return feed_dict
+
+    def add_prediction_op(self):
+        """Implements the core of the model that transforms a batch of input data into predictions.
+
+        Returns:
+            pred: A tensor of shape (batch_size, n_classes)
+            logits: A tensor of shape (batch_size, n_classes)
+        """
+        raise NotImplementedError("Each Model must re-implement this method.")
+
+    def add_loss_op(self, pred, logits):
+        """Adds Ops for the loss function to the computational graph.
+
+        Args:
+            pred: A tensor of shape (batch_size, n_classes)
+            logits: A tensor of shape (batch_size, n_classes)
+        Returns:
+            loss: A 0-d tensor (scalar) output
+        """
+        return tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
+            logits=logits, labels=self.labels_placeholder))
+
+    def add_training_op(self, loss):
+        """Sets up the training Ops.
+
+        Creates an optimizer and applies the gradients to all trainable variables.
+        The Op returned by this function is what must be passed to the
+        sess.run() to train the model. See
+
+        https://www.tensorflow.org/versions/r0.7/api_docs/python/train.html#Optimizer
+
+        for more information.
+
+        Args:
+            loss: Loss tensor (a scalar).
+        Returns:
+            train_op: The Op for training.
+        """
+        return tf.train.AdamOptimizer().minimize(loss)
+
+    def train_on_batch(self, sess,
+                       sentence1_batch, sentence1_lens_batch,
+                       sentence2_batch, sentence2_lens_batch,
+                       labels_batch):
+        """Perform one step of gradient descent on the provided batch of data.
+
+        Args:
+            sess: tf.Session()
+            sentence1_batch: np.ndarray of shape (n_samples, max_len)
+            sentence1_lens_batch: np.ndarray of shape (n_samples)
+            sentence2_batch: np.ndarray of shape (n_samples, max_len)
+            sentence2_lens_batch: np.ndarray of shape (n_samples)
+            labels_batch: np.ndarray of shape (n_samples)
+        Returns:
+            loss: loss over the batch (a scalar)
+        """
+        feed = self.create_feed_dict(sentence1_batch, sentence1_lens_batch,
+                                     sentence2_batch, sentence2_lens_batch,
+                                     labels_batch)
+        _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
+        return loss
+
+    def predict_on_batch(self, sess,
+                         sentence1_batch, sentence1_lens_batch,
+                         sentence2_batch, sentence2_lens_batch):
+        """Make predictions for the provided batch of data
+
+        Args:
+            sess: tf.Session()
+            sentence1_batch: np.ndarray of shape (n_samples, max_len)
+            sentence1_lens_batch: np.ndarray of shape (n_samples)
+            sentence2_batch: np.ndarray of shape (n_samples, max_len)
+            sentence2_lens_batch: np.ndarray of shape (n_samples)
+        Returns:
+            predictions: np.ndarray of shape (n_samples, n_classes)
+        """
+        feed = self.create_feed_dict(sentence1_batch, sentence1_lens_batch,
+                                     sentence2_batch, sentence2_lens_batch)
+        predictions = sess.run(self.pred, feed_dict=feed)
+        return predictions
+
+    def build(self):
+        self.add_placeholders()
+        self.pred, self.logits = self.add_prediction_op()
+        self.loss = self.add_loss_op(self.pred, self.logits)
+        self.train_op = self.add_training_op(self.loss)
