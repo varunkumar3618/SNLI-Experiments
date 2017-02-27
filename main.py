@@ -23,6 +23,7 @@ flags.DEFINE_integer("max_seq_len", 100, "The maximum length of a sentence. Sent
 # Model
 flags.DEFINE_integer("word_embed_dim", 50, "The dimension of the embedding matrix.")
 flags.DEFINE_integer("hidden_size", 100, "The size of the hidden layer, applicable to some models.")
+flags.DEFINE_boolean("update_embeddings", False, "Whether the word vectors should be updated")
 
 # Training
 flags.DEFINE_integer("batch_size", 100, "The batch size.")
@@ -69,6 +70,7 @@ def main(_):
         if FLAGS.model == "SOW":
             model = SumOfWords(
                 embedding_matrix=embedding_matrix,
+                update_embeddings=FLAGS.update_embeddings,
                 hidden_size=FLAGS.hidden_size,
                 max_seq_len=FLAGS.max_seq_len
             )
