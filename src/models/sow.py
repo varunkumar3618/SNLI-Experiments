@@ -18,10 +18,18 @@ class SumOfWords(SNLIModel):
         hyp_sow = tf.reduce_sum(hyp_embed, axis=1)
         both_sow = tf.concat([prem_sow, hyp_sow], axis=1)
 
-        h1 = tf.layers.dense(both_sow, self._hidden_size, activation=tf.tanh, name="h1")
-        h2 = tf.layers.dense(h1, self._hidden_size, activation=tf.tanh, name="h2")
-        h3 = tf.layers.dense(h2, self._hidden_size, activation=tf.tanh, name="h3")
-        logits = tf.layers.dense(h3, self._hidden_size, name="logits")
+        h1 = tf.layers.dense(both_sow, self._hidden_size,
+                             kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                             activation=tf.tanh, name="h1")
+        h2 = tf.layers.dense(h1, self._hidden_size,
+                             kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                             activation=tf.tanh, name="h2")
+        h3 = tf.layers.dense(h2, self._hidden_size,
+                             kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                             activation=tf.tanh, name="h3")
+        logits = tf.layers.dense(h3, self._hidden_size,
+                                 kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                 name="logits")
         preds = tf.argmax(logits, axis=1)
         return preds, logits
     
