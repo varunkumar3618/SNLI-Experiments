@@ -9,8 +9,7 @@ GloVe data: http://nlp.stanford.edu/data/glove.6B.zip
 
 """
 
-def get_glove_vectors(glove_dir, dim, vocab):
-    glove_file = os.path.join(glove_dir, "glove.6B.%sd.txt" % dim)
+def get_glove_vectors(glove_file, dim, vocab):
     matrix = np.zeros([vocab.size(), dim])
 
     with open(glove_file) as ifs:

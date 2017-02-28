@@ -1,3 +1,5 @@
+import os
+
 import tensorflow as tf
 import numpy as np
 
@@ -12,18 +14,17 @@ flags = tf.app.flags
 flags.DEFINE_string("model", "SOW", "The type of model to train.")
 
 # File paths
-flags.DEFINE_string("snli_dir", "data/snli_1.0", "The location of the SNLI dataset.")
-flags.DEFINE_string("glove_dir", "data/glove.6B", "The location of the Glove word embeddings.")
-flags.DEFINE_string("vocab_file", "data/vocab.txt", "The location of the vocabulary file.")
-flags.DEFINE_string("checkpoint_dir", "data/model", "Where to save the model.")
+flags.DEFINE_string("data_dir", "data/", "The location of the data files.")
+flags.DEFINE_string("checkpoint_subdir", "model/", "The checkpoint subdirectory inside data_dir")
+flags.DEFINE_string("glove_type", "common", "The source of the Glove word vectors used: one of 'wiki' and 'common'")
 
 # Data
 flags.DEFINE_integer("max_vocab_size", 10000, "The maximum size of the vocabulary.")
 flags.DEFINE_integer("max_seq_len", 100, "The maximum length of a sentence. Sentences longer than this will be truncated.")
 
 # Model
-flags.DEFINE_integer("word_embed_dim", 50, "The dimension of the embedding matrix.")
-flags.DEFINE_integer("hidden_size", 100, "The size of the hidden layer, applicable to some models.")
+flags.DEFINE_integer("word_embed_dim", 300, "The dimension of the embedding matrix.")
+flags.DEFINE_integer("hidden_size", 200, "The size of the hidden layer, applicable to some models.")
 flags.DEFINE_boolean("update_embeddings", False, "Whether the word vectors should be updated")
 flags.DEFINE_boolean("use_peepholes", True, "Whether to use peephole connections, applicable to LSTM models.")
 
@@ -35,6 +36,19 @@ flags.DEFINE_boolean("debug", False, "Whether to run in debug mode, i.e. use a s
 flags.DEFINE_boolean("train", True, "Whether to train or test the model.")
 
 FLAGS = flags.FLAGS
+
+snli_dir = os.path.join(FLAGS.data_dir, "snli_1.0")
+vocab_file = os.path.join(FLAGS.data_dir, "vocab.txt")
+
+if FLAGS.glove_type == "wiki":
+    glove_file = os.path.join(os.path.join(FLAGS.data_dir, "glove.6B"), "glove.6B.%sd.txt" % FLAGS.word_embed_dim)
+elif FLAGS.glove_type == "common":
+    if FLAGS.word_embed_dim != 300:
+        raise ValueError("Common Crawl word vectors are only available with dimension 300.")
+    glove_file = os.path.join(os.path.join(FLAGS.data_dir, "glove.840B.300d"), "glove.840B.300d.txt")
+else:
+    raise ValueError("Unrecognized word vector type: %s." % FLAGS.glove_type)
+
 
 def run_train_epoch(sess, model, dataset, epoch_num):
     print "="*79
@@ -65,9 +79,9 @@ def run_eval_epoch(sess, model, dataset, split):
 
 def main(_):
     with tf.Graph().as_default():
-        vocab = Vocab(FLAGS.snli_dir, FLAGS.vocab_file, FLAGS.max_vocab_size)
-        dataset = Dataset(FLAGS.snli_dir, vocab, FLAGS.max_seq_len, debug=FLAGS.debug)
-        embedding_matrix = get_glove_vectors(FLAGS.glove_dir, FLAGS.word_embed_dim, vocab)
+        vocab = Vocab(snli_dir, vocab_file, FLAGS.max_vocab_size)
+        dataset = Dataset(snli_dir, vocab, FLAGS.max_seq_len, debug=FLAGS.debug)
+        embedding_matrix = get_glove_vectors(glove_file, FLAGS.word_embed_dim, vocab)
 
         if FLAGS.model == "SOW":
             model = SumOfWords(
