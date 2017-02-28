@@ -7,3 +7,9 @@ Run "pip install --upgrade -r requirements.txt" to install all requirements exce
 The final step is to download the nltk tokenizer. To do this, open the python terminal and run the following commands:
 import nltk
 nltk.download("punkt")
+
+# Models
+
+Sum of Words Model
+We use the sum of words model described in "A large annotated corpus for learning natural language inference" (Bowman et al.)  as a baseline. You can run this with:
+python main.py --word_embed_dim 100 --hidden_size 200

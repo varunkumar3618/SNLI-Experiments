@@ -38,7 +38,7 @@ FLAGS = flags.FLAGS
 
 def run_train_epoch(sess, model, dataset, epoch_num):
     print "="*79
-    print "Epoch: %s" % epoch_num
+    print "Epoch: %s" % (epoch_num + 1)
     prog = Progbar(target=dataset.split_num_batches("train", FLAGS.batch_size))
     for i, batch in enumerate(dataset.get_shuffled_iterator("train", FLAGS.batch_size)):
         loss = model.train_on_batch(sess, *batch)
