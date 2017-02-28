@@ -33,6 +33,7 @@ flags.DEFINE_integer("num_epochs", 50, "The numer of epochs to train for.")
 
 flags.DEFINE_boolean("debug", False, "Whether to run in debug mode, i.e. use a smaller dataset and increase verbosity.")
 flags.DEFINE_boolean("train", True, "Whether to train or test the model.")
+flags.DEFINE_boolean("save", True, "Whether to save the model periodically")
 
 FLAGS = flags.FLAGS
 
@@ -62,6 +63,7 @@ def run_eval_epoch(sess, model, dataset, split):
     accuracy = np.average(accuracies, weights=batch_sizes)
     print "Accuracy: %s" % accuracy
     print "-"*79
+    return accuracy
 
 def main(_):
     with tf.Graph().as_default():
@@ -88,14 +90,23 @@ def main(_):
             raise ValueError("Unrecognized model: %s." % FLAGS.model)
         model.build()
 
+        saver = None
+        if FLAGS.save:
+            saver = tf.train.Saver()
+
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
             sess.run(tf.local_variables_initializer())
 
             if FLAGS.train:
+                best_accuracy = 0
                 for epoch in range(FLAGS.num_epochs):
                     run_train_epoch(sess, model, dataset, epoch)
-                    run_eval_epoch(sess, model, dataset, "dev")
+                    accuracy = run_eval_epoch(sess, model, dataset, "dev")
+
+                    if accuracy > best_accuracy:
+                        saver.save(sess, FLAGS.checkpoint_dir + 'best_model_' + FLAGS.model,
+                           global_step=epoch+1)
             else:
                 raise ValueError("Cannot test the model just yet.")
 
