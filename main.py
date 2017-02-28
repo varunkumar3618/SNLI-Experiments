@@ -118,7 +118,7 @@ def main(_):
                     run_train_epoch(sess, model, dataset, epoch)
                     accuracy = run_eval_epoch(sess, model, dataset, "dev")
 
-                    if accuracy > best_accuracy:
+                    if accuracy > best_accuracy and FLAGS.save:
                         saver.save(sess, FLAGS.checkpoint_dir + 'best_model_' + FLAGS.model,
                            global_step=epoch+1)
             else:
