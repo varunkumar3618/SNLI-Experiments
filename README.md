@@ -12,4 +12,4 @@ nltk.download("punkt")
 
 Sum of Words Model
 We use the sum of words model described in "A large annotated corpus for learning natural language inference" (Bowman et al.)  as a baseline. You can run this with:
-python main.py --word_embed_dim 100 --hidden_size 200
+python main.py --word_embed_dim 100 --hidden_size 200 --glove_type wiki

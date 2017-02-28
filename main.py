@@ -15,7 +15,7 @@ flags.DEFINE_string("model", "SOW", "The type of model to train.")
 
 # File paths
 flags.DEFINE_string("data_dir", "data/", "The location of the data files.")
-flags.DEFINE_string("checkpoint_subdir", "model/", "The checkpoint subdirectory inside data_dir")
+flags.DEFINE_string("checkpoint_subdir", "data/model/", "The checkpoint subdirectory inside data_dir")
 flags.DEFINE_string("glove_type", "common", "The source of the Glove word vectors used: one of 'wiki' and 'common'")
 
 # Data
@@ -46,7 +46,7 @@ if FLAGS.glove_type == "wiki":
 elif FLAGS.glove_type == "common":
     if FLAGS.word_embed_dim != 300:
         raise ValueError("Common Crawl word vectors are only available with dimension 300.")
-    glove_file = os.path.join(os.path.join(FLAGS.data_dir, "glove.840B.300d"), "glove.840B.300d.txt")
+    glove_file = os.path.join(os.path.join(FLAGS.data_dir, "glove.840B.300d"), "glove.6B.300d.txt")
 else:
     raise ValueError("Unrecognized word vector type: %s." % FLAGS.glove_type)
 
@@ -80,6 +80,9 @@ def run_eval_epoch(sess, model, dataset, split):
     return accuracy
 
 def main(_):
+    if not os.path.exists('./data/model/'):
+        os.makedirs('./data/model/')
+
     with tf.Graph().as_default():
         vocab = Vocab(snli_dir, vocab_file, FLAGS.max_vocab_size)
         dataset = Dataset(snli_dir, vocab, FLAGS.max_seq_len, debug=FLAGS.debug)
@@ -119,7 +122,7 @@ def main(_):
                     accuracy = run_eval_epoch(sess, model, dataset, "dev")
 
                     if accuracy > best_accuracy and FLAGS.save:
-                        saver.save(sess, FLAGS.checkpoint_dir + 'best_model_' + FLAGS.model,
+                        saver.save(sess, FLAGS.checkpoint_subdir + 'best_model_' + FLAGS.model,
                            global_step=epoch+1)
             else:
                 raise ValueError("Cannot test the model just yet.")
