@@ -6,9 +6,11 @@ class SNLIModel(object):
     We use various Model classes as usual abstractions to encapsulate tensorflow
     computational graphs.
     """
-    def __init__(self, max_seq_len, use_lens):
+    def __init__(self, max_seq_len, use_lens, use_dropout, dropout_rate=-1):
         self._max_seq_len = max_seq_len
         self._use_lens = use_lens
+        self._use_dropout = use_dropout
+        self._dropout_rate = dropout_rate
 
     def add_placeholders(self):
         """Adds placeholder variables to tensorflow computational graph.
@@ -29,10 +31,13 @@ class SNLIModel(object):
             self.sentence1_lens_placeholder = tf.placeholder(tf.int64, shape=[None], name="sentence1_lengths")
             self.sentence2_lens_placeholder = tf.placeholder(tf.int64, shape=[None], name="sentence2_lengths")
 
+        if self._use_dropout:
+            self.dropout_placeholder = tf.placeholder(tf.float32)
+
     def create_feed_dict(self,
                          sentence1_batch, sentence1_lens_batch,
                          sentence2_batch, sentence2_lens_batch,
-                         labels_batch=None):
+                         labels_batch=None, train_mode=True):
         """Creates the feed_dict for one step of training.
 
         A feed_dict takes the form of:
@@ -51,6 +56,7 @@ class SNLIModel(object):
             sentence2_batch: np.ndarray of shape (n_samples, max_len)
             sentence2_lens_batch: np.ndarray of shape (n_samples)
             labels_batch: np.ndarray of shape (n_samples)
+            train_mode: boolean
         Returns:
             feed_dict: The feed dictionary mapping from placeholders to values.
         """
@@ -64,6 +70,12 @@ class SNLIModel(object):
 
         if labels_batch is not None:
             feed_dict[self.labels_placeholder] = labels_batch
+
+        if self._use_dropout:
+            if train_mode:
+                feed_dict[self.dropout_placeholder] = self._dropout_rate
+            else:
+                feed_dict[self.dropout_placeholder] = 1.
 
         return feed_dict
 
@@ -134,7 +146,7 @@ class SNLIModel(object):
         """
         feed = self.create_feed_dict(sentence1_batch, sentence1_lens_batch,
                                      sentence2_batch, sentence2_lens_batch,
-                                     labels_batch)
+                                     labels_batch, train_mode=True)
         _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
         return loss
 
@@ -157,7 +169,7 @@ class SNLIModel(object):
         """
         feed = self.create_feed_dict(sentence1_batch, sentence1_lens_batch,
                                      sentence2_batch, sentence2_lens_batch,
-                                     labels_batch)
+                                     labels_batch, train_mode=False)
         return sess.run([self.acc_op, self.loss], feed_dict=feed)
 
     def predict_on_batch(self, sess,
@@ -175,7 +187,8 @@ class SNLIModel(object):
             predictions: np.ndarray of shape (n_samples, n_classes)
         """
         feed = self.create_feed_dict(sentence1_batch, sentence1_lens_batch,
-                                     sentence2_batch, sentence2_lens_batch)
+                                     sentence2_batch, sentence2_lens_batch,
+                                     train_mode=False)
         predictions = sess.run(self.pred, feed_dict=feed)
         return predictions
 

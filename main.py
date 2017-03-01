@@ -27,6 +27,7 @@ flags.DEFINE_integer("word_embed_dim", 300, "The dimension of the embedding matr
 flags.DEFINE_integer("hidden_size", 200, "The size of the hidden layer, applicable to some models.")
 flags.DEFINE_boolean("update_embeddings", False, "Whether the word vectors should be updated")
 flags.DEFINE_boolean("use_peepholes", True, "Whether to use peephole connections, applicable to LSTM models.")
+flags.DEFINE_float("dropout_rate", 0.15, "How many units to eliminate during training, applicable to models using dropout.")
 
 # Training
 flags.DEFINE_integer("batch_size", 100, "The batch size.")
@@ -95,7 +96,8 @@ def main(_):
                 update_embeddings=FLAGS.update_embeddings,
                 hidden_size=FLAGS.hidden_size,
                 l2_reg=FLAGS.l2_reg,
-                max_seq_len=FLAGS.max_seq_len
+                max_seq_len=FLAGS.max_seq_len,
+                dropout_rate=FLAGS.dropout_rate
             )
         elif FLAGS.model == "Attention":
             model = AttentionModel(

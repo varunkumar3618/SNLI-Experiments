@@ -9,7 +9,7 @@ class SumOfWords(SNLIModel):
                  hidden_size,
                  l2_reg,
                  *args, **kwargs):
-        super(SumOfWords, self).__init__(use_lens=False, *args, **kwargs)
+        super(SumOfWords, self).__init__(use_lens=False, use_dropout=True, *args, **kwargs)
         self._embedding_matrix = embedding_matrix
         self._update_embeddings = update_embeddings
         self._l2_reg = l2_reg
@@ -24,6 +24,9 @@ class SumOfWords(SNLIModel):
             hyp_embed = get_embedding(self.sentence2_placeholder, self._embedding_matrix,
                                       self._update_embeddings, reuse=True)
 
+            prem_embed = tf.layers.dropout(prem_embed, self.dropout_placeholder)
+            hyp_embed = tf.layers.dropout(hyp_embed, self.dropout_placeholder)
+
             prem_proj = tf.layers.dense(prem_embed, self._hidden_size / 2,
                                         kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                         activation=tf.tanh, name="prem_proj")
@@ -34,6 +37,8 @@ class SumOfWords(SNLIModel):
             prem_sow = tf.reduce_sum(prem_proj, axis=1)
             hyp_sow = tf.reduce_sum(hyp_proj, axis=1)
             both_sow = tf.concat([prem_sow, hyp_sow], axis=1)
+
+            both_sow = tf.layers.dropout(both_sow, self.dropout_placeholder)
 
             h1 = tf.layers.dense(both_sow, self._hidden_size,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
