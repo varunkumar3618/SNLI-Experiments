@@ -31,6 +31,7 @@ flags.DEFINE_boolean("use_peepholes", True, "Whether to use peephole connections
 # Training
 flags.DEFINE_integer("batch_size", 100, "The batch size.")
 flags.DEFINE_integer("num_epochs", 50, "The numer of epochs to train for.")
+flags.DEFINE_float("l2_reg", 1e-4, "The level of l2 regularization to use.")
 
 flags.DEFINE_boolean("debug", False, "Whether to run in debug mode, i.e. use a smaller dataset and increase verbosity.")
 flags.DEFINE_boolean("train", True, "Whether to train or test the model.")
@@ -88,6 +89,7 @@ def main(_):
                 embedding_matrix=embedding_matrix,
                 update_embeddings=FLAGS.update_embeddings,
                 hidden_size=FLAGS.hidden_size,
+                l2_reg=FLAGS.l2_reg,
                 max_seq_len=FLAGS.max_seq_len
             )
         elif FLAGS.model == "Attention":
