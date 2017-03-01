@@ -11,6 +11,7 @@ GloVe data: http://nlp.stanford.edu/data/glove.6B.zip
 
 def get_glove_vectors(glove_file, dim, vocab):
     matrix = np.zeros([vocab.size(), dim])
+    found_set = set()
 
     with open(glove_file) as ifs:
         for line in ifs:
@@ -25,4 +26,11 @@ def get_glove_vectors(glove_file, dim, vocab):
             if len(data) != dim:
                 raise RuntimeError("wrong number of dimensions")
             matrix[vocab.id_for_token(token)] = np.asarray(data)
+            found_set.add(token)
+
+    for token in vocab.token_id.keys():
+        if token not in found_set:
+            print "WARNING: %s was not found in the Glove file. Its embedding will be set to zero."\
+                % token
+
     return matrix

@@ -24,18 +24,18 @@ class SumOfWords(SNLIModel):
             hyp_embed = get_embedding(self.sentence2_placeholder, self._embedding_matrix,
                                       self._update_embeddings, reuse=True)
 
-            prem_sow = tf.reduce_sum(prem_embed, axis=1)
-            hyp_sow = tf.reduce_sum(hyp_embed, axis=1)
-
-            prem_proj = tf.layers.dense(prem_sow, self._hidden_size / 2,
+            prem_proj = tf.layers.dense(prem_embed, self._hidden_size / 2,
                                         kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                         activation=tf.tanh, name="prem_proj")
-            hyp_proj = tf.layers.dense(hyp_sow, self._hidden_size / 2,
+            hyp_proj = tf.layers.dense(hyp_embed, self._hidden_size / 2,
                                        kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                        activation=tf.tanh, name="hyp_proj")
-            both_proj = tf.concat([prem_proj, hyp_proj], axis=1)
 
-            h1 = tf.layers.dense(both_proj, self._hidden_size,
+            prem_sow = tf.reduce_sum(prem_proj, axis=1)
+            hyp_sow = tf.reduce_sum(hyp_proj, axis=1)
+            both_sow = tf.concat([prem_sow, hyp_sow], axis=1)
+
+            h1 = tf.layers.dense(both_sow, self._hidden_size,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                  kernel_regularizer=reg,
                                  activation=tf.tanh, name="h1")
