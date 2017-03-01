@@ -47,7 +47,7 @@ if FLAGS.glove_type == "wiki":
 elif FLAGS.glove_type == "common":
     if FLAGS.word_embed_dim != 300:
         raise ValueError("Common Crawl word vectors are only available with dimension 300.")
-    glove_file = os.path.join(os.path.join(FLAGS.data_dir, "glove.840B.300d"), "glove.6B.300d.txt")
+    glove_file = os.path.join(os.path.join(FLAGS.data_dir, "glove.840B.300d"), "glove.840B.300d.txt")
 else:
     raise ValueError("Unrecognized word vector type: %s." % FLAGS.glove_type)
 
