@@ -4,6 +4,7 @@ import tensorflow as tf
 import numpy as np
 
 from src.models.sow import SumOfWords
+from src.models.rnn_encoder import RNNEncoder
 from src.models.attention import AttentionModel
 from src.utils.dataset import Dataset
 from src.utils.vocab import Vocab
@@ -15,7 +16,7 @@ flags.DEFINE_string("model", "SOW", "The type of model to train.")
 
 # File paths
 flags.DEFINE_string("data_dir", "data/", "The location of the data files.")
-flags.DEFINE_string("checkpoint_subdir", "data/model/", "The checkpoint subdirectory inside data_dir")
+flags.DEFINE_string("checkpoint_subdir", "model/", "The checkpoint subdirectory inside data_dir")
 flags.DEFINE_string("glove_type", "common", "The source of the Glove word vectors used: one of 'wiki' and 'common'")
 
 # Data
@@ -42,6 +43,8 @@ FLAGS = flags.FLAGS
 
 snli_dir = os.path.join(FLAGS.data_dir, "snli_1.0")
 vocab_file = os.path.join(FLAGS.data_dir, "vocab.txt")
+data_file = os.path.join(FLAGS.data_dir, "data.pkl")
+checkpoint_dir = os.path.join(FLAGS.data_dir, FLAGS.checkpoint_subdir)
 
 if FLAGS.glove_type == "wiki":
     glove_file = os.path.join(os.path.join(FLAGS.data_dir, "glove.6B"), "glove.6B.%sd.txt" % FLAGS.word_embed_dim)
@@ -87,7 +90,7 @@ def main(_):
 
     with tf.Graph().as_default():
         vocab = Vocab(snli_dir, vocab_file, FLAGS.max_vocab_size)
-        dataset = Dataset(snli_dir, vocab, FLAGS.max_seq_len, debug=FLAGS.debug)
+        dataset = Dataset(snli_dir, data_file, vocab, FLAGS.max_seq_len, debug=FLAGS.debug)
         embedding_matrix = get_glove_vectors(glove_file, FLAGS.word_embed_dim, vocab)
 
         if FLAGS.model == "SOW":
@@ -98,6 +101,16 @@ def main(_):
                 l2_reg=FLAGS.l2_reg,
                 max_seq_len=FLAGS.max_seq_len,
                 dropout_rate=FLAGS.dropout_rate
+            )
+        elif FLAGS.model == "RNN_Encoder":
+            model = RNNEncoder(
+                embedding_matrix=embedding_matrix,
+                update_embeddings=FLAGS.update_embeddings,
+                hidden_size=FLAGS.hidden_size,
+                l2_reg=FLAGS.l2_reg,
+                max_seq_len=FLAGS.max_seq_len,
+                dropout_rate=FLAGS.dropout_rate,
+                use_peepholes=FLAGS.use_peepholes
             )
         elif FLAGS.model == "Attention":
             model = AttentionModel(
@@ -126,7 +139,7 @@ def main(_):
                     accuracy = run_eval_epoch(sess, model, dataset, "dev")
 
                     if accuracy > best_accuracy and FLAGS.save:
-                        saver.save(sess, FLAGS.checkpoint_subdir + 'best_model_' + FLAGS.model,
+                        saver.save(sess, checkpoint_dir + 'best_model_' + FLAGS.model,
                            global_step=epoch+1)
             else:
                 raise ValueError("Cannot test the model just yet.")

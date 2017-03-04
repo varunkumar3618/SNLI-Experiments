@@ -1,5 +1,6 @@
 import os
 import math
+import pickle
 
 import tensorflow as tf
 import pandas as pd
@@ -7,7 +8,27 @@ import numpy as np
 
 
 class Dataset(object):
-    def __init__(self, snli_dir, vocab, max_seq_length, debug=False):
+    def __init__(self, snli_dir, data_file, vocab, max_seq_length, debug=False):
+        if os.path.isfile(data_file)\
+                and self._file_is_valid(data_file, vocab, max_seq_length, debug):
+            with open(data_file, "r") as f:
+                self._dataframes = pickle.load(f)[0]
+            print "Loading data from the pickled file..."
+        else:
+            self._dataframes = self._create_dataframes(snli_dir, data_file, vocab,
+                                                       max_seq_length, debug)
+            print "Pickling the data object..."
+            with open(data_file, "wb") as f:
+                pickle.dump((self._dataframes, max_seq_length, vocab.max_vocab_size,
+                            vocab.vocab_file, debug), f)
+
+    def _file_is_valid(self, data_file, vocab, max_seq_length, debug):
+        with open(data_file, "r") as f:
+            _, max_seq_length_, max_vocab_size, vocab_file, debug_ = pickle.load(f)
+            return max_seq_length == max_seq_length_ and max_vocab_size == vocab.max_vocab_size\
+                and vocab_file == vocab.vocab_file and debug == debug_
+
+    def _create_dataframes(self, snli_dir, data_file, vocab, max_seq_length, debug=False):
         dataframes = {}
         for split in ["train", "dev", "test"]:
             filepath = os.path.join(snli_dir, "snli_1.0_%s.jsonl" % split)
@@ -39,7 +60,7 @@ class Dataset(object):
             df["l_int"] = df["gold_label"].apply(lambda l: np.array(labels_to_ints[l], dtype=np.int64))
 
             dataframes[split] = df
-        self._dataframes = dataframes
+        return dataframes
 
     def _make_batch(self, df):
         # The sequence lengths are required in order to use Tensorflow's dynamic rnn functions correctly
