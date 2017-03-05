@@ -77,8 +77,8 @@ class RNNEncoder(SNLIModel):
         return loss
 
     def add_training_op(self, loss):
-        opt = tf.train.AdamOptimizer()
-        gradients = opt.compute_gradients(loss)
+        optimizer = tf.train.AdamOptimizer()
+        gradients = optimizer.compute_gradients(loss)
         if self._clip_gradients:
             gradient_values = tf.clip_by_global_norm([g[0] for g in gradients], self._max_grad_norm)[0]
             gradients = [(gv, var) for gv, (_, var) in zip(gradient_values, gradients)]
