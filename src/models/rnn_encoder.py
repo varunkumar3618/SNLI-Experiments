@@ -44,12 +44,12 @@ class RNNEncoder(SNLIModel):
             )
             with tf.variable_scope("prem_encoder"):
                 # Harcoded to use an LSTM
-                _, (_, hyp_encoded) = tf.nn.dynamic_rnn(cell, prem_proj, dtype=tf.float32,
-                                                   sequence_length=self.sentence1_lens_placeholder)
+                _, (_, prem_encoded) = tf.nn.dynamic_rnn(cell, prem_proj, dtype=tf.float32,
+                                                         sequence_length=self.sentence1_lens_placeholder)
             with tf.variable_scope("hyp_encoder"):
                 # Harcoded to use an LSTM
                 _, (_, hyp_encoded) = tf.nn.dynamic_rnn(cell, hyp_proj, dtype=tf.float32,
-                                                  sequence_length=self.sentence2_lens_placeholder)
+                                                        sequence_length=self.sentence2_lens_placeholder)
 
             both_encoded = tf.concat([prem_encoded, hyp_encoded], axis=1)
             both_encoded = tf.layers.dropout(both_encoded, self.dropout_placeholder)
