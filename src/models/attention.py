@@ -26,7 +26,11 @@ class AttentionModel(SNLIModel):
             # Use LSTMs to run through the entire premise and hypothesis vectors.
             # Initialize the initial hidden state of the hypothesis LSTM using the final premise
             # hidden state.
-            cell = tf.contrib.rnn.LSTMCell(self._hidden_size, use_peepholes=self._use_peepholes)
+            cell = tf.contrib.rnn.LSTMCell(
+                self._hidden_size,
+                use_peepholes=self._use_peepholes,
+                initializer=tf.contrib.layers.xavier_initializer()
+            )
             with tf.variable_scope("prem_encoder"):
                 # prem_states.shape => [batch_size, max_len_seq, _hidden_size]
                 prem_states, prem_final_state \

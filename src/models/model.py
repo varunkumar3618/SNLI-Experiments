@@ -6,11 +6,14 @@ class SNLIModel(object):
     We use various Model classes as usual abstractions to encapsulate tensorflow
     computational graphs.
     """
-    def __init__(self, max_seq_len, use_lens, use_dropout, learning_rate, dropout_rate=-1):
+    def __init__(self, learning_rate, max_seq_len, use_lens=False, use_dropout=False,
+                 dropout_rate=-1, clip_gradients=False, max_grad_norm=-1):
         self._max_seq_len = max_seq_len
         self._use_lens = use_lens
         self._use_dropout = use_dropout
         self._dropout_rate = dropout_rate
+        self._clip_gradients = clip_gradients
+        self._max_grad_norm = max_grad_norm
 
     def add_placeholders(self):
         """Adds placeholder variables to tensorflow computational graph.
@@ -126,7 +129,13 @@ class SNLIModel(object):
         Returns:
             train_op: The Op for training.
         """
-        return tf.train.AdamOptimizer().minimize(loss)
+        optimizer = tf.train.AdamOptimizer()
+        gradients = optimizer.compute_gradients(loss)
+        if self._clip_gradients:
+            gradient_values = tf.clip_by_global_norm([g[0] for g in gradients], self._max_grad_norm)[0]
+            gradients = [(gv, var) for gv, (_, var) in zip(gradient_values, gradients)]
+        train_op = optimizer.apply_gradients(gradients)
+        return train_op
 
     def train_on_batch(self, sess,
                        sentence1_batch, sentence1_lens_batch,

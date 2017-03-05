@@ -9,7 +9,7 @@ class SumOfWords(SNLIModel):
                  hidden_size,
                  l2_reg,
                  *args, **kwargs):
-        super(SumOfWords, self).__init__(use_lens=False, use_dropout=True, *args, **kwargs)
+        super(SumOfWords, self).__init__(use_dropout=True, *args, **kwargs)
         self._embedding_matrix = embedding_matrix
         self._update_embeddings = update_embeddings
         self._l2_reg = l2_reg
