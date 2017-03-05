@@ -4,6 +4,7 @@ import tensorflow as tf
 import numpy as np
 
 from src.models.sow import SumOfWords
+from src.models.rnn_encoder import RNNEncoder
 from src.models.attention import AttentionModel
 from src.utils.dataset import Dataset
 from src.utils.vocab import Vocab
@@ -15,7 +16,7 @@ flags.DEFINE_string("model", "SOW", "The type of model to train.")
 
 # File paths
 flags.DEFINE_string("data_dir", "data/", "The location of the data files.")
-flags.DEFINE_string("checkpoint_subdir", "data/model/", "The checkpoint subdirectory inside data_dir")
+flags.DEFINE_string("checkpoint_subdir", "model/", "The checkpoint subdirectory inside data_dir")
 flags.DEFINE_string("glove_type", "common", "The source of the Glove word vectors used: one of 'wiki' and 'common'")
 
 # Data
@@ -28,11 +29,14 @@ flags.DEFINE_integer("hidden_size", 200, "The size of the hidden layer, applicab
 flags.DEFINE_boolean("update_embeddings", False, "Whether the word vectors should be updated")
 flags.DEFINE_boolean("use_peepholes", True, "Whether to use peephole connections, applicable to LSTM models.")
 flags.DEFINE_float("dropout_rate", 0.15, "How many units to eliminate during training, applicable to models using dropout.")
+flags.DEFINE_boolean("clip_gradients", True, "Whether to clip gradients, applicable to LSTM models.")
+flags.DEFINE_float("max_grad_norm", 5., "The maxmium norm that gradients should be allowed to take.")
 
 # Training
 flags.DEFINE_integer("batch_size", 100, "The batch size.")
 flags.DEFINE_integer("num_epochs", 50, "The numer of epochs to train for.")
 flags.DEFINE_float("l2_reg", 1e-4, "The level of l2 regularization to use.")
+flags.DEFINE_float("learning_rate", 1e-3, "The learning rate.")
 
 flags.DEFINE_boolean("debug", False, "Whether to run in debug mode, i.e. use a smaller dataset and increase verbosity.")
 flags.DEFINE_boolean("train", True, "Whether to train or test the model.")
@@ -42,6 +46,8 @@ FLAGS = flags.FLAGS
 
 snli_dir = os.path.join(FLAGS.data_dir, "snli_1.0")
 vocab_file = os.path.join(FLAGS.data_dir, "vocab.txt")
+data_file = os.path.join(FLAGS.data_dir, "data.pkl")
+checkpoint_dir = os.path.join(FLAGS.data_dir, FLAGS.checkpoint_subdir)
 
 if FLAGS.glove_type == "wiki":
     glove_file = os.path.join(os.path.join(FLAGS.data_dir, "glove.6B"), "glove.6B.%sd.txt" % FLAGS.word_embed_dim)
@@ -87,7 +93,7 @@ def main(_):
 
     with tf.Graph().as_default():
         vocab = Vocab(snli_dir, vocab_file, FLAGS.max_vocab_size)
-        dataset = Dataset(snli_dir, vocab, FLAGS.max_seq_len, debug=FLAGS.debug)
+        dataset = Dataset(snli_dir, data_file, vocab, FLAGS.max_seq_len, debug=FLAGS.debug)
         embedding_matrix = get_glove_vectors(glove_file, FLAGS.word_embed_dim, vocab)
 
         if FLAGS.model == "SOW":
@@ -97,7 +103,21 @@ def main(_):
                 hidden_size=FLAGS.hidden_size,
                 l2_reg=FLAGS.l2_reg,
                 max_seq_len=FLAGS.max_seq_len,
-                dropout_rate=FLAGS.dropout_rate
+                dropout_rate=FLAGS.dropout_rate,
+                learning_rate=FLAGS.learning_rate
+            )
+        elif FLAGS.model == "RNN_Encoder":
+            model = RNNEncoder(
+                embedding_matrix=embedding_matrix,
+                update_embeddings=FLAGS.update_embeddings,
+                hidden_size=FLAGS.hidden_size,
+                l2_reg=FLAGS.l2_reg,
+                max_seq_len=FLAGS.max_seq_len,
+                dropout_rate=FLAGS.dropout_rate,
+                use_peepholes=FLAGS.use_peepholes,
+                clip_gradients=FLAGS.clip_gradients,
+                max_grad_norm=FLAGS.max_grad_norm,
+                learning_rate=FLAGS.learning_rate
             )
         elif FLAGS.model == "Attention":
             model = AttentionModel(
@@ -105,7 +125,8 @@ def main(_):
                 update_embeddings=FLAGS.update_embeddings,
                 hidden_size=FLAGS.hidden_size,
                 use_peepholes=FLAGS.use_peepholes,
-                max_seq_len=FLAGS.max_seq_len
+                max_seq_len=FLAGS.max_seq_len,
+                learning_rate=FLAGS.learning_rate
             )
         else:
             raise ValueError("Unrecognized model: %s." % FLAGS.model)
@@ -123,10 +144,10 @@ def main(_):
                 best_accuracy = 0
                 for epoch in range(FLAGS.num_epochs):
                     run_train_epoch(sess, model, dataset, epoch)
-                    accuracy = run_eval_epoch(sess, model, dataset, "dev")
+                    accuracy = run_eval_epoch(sess, model, dataset, "train" if FLAGS.debug else "dev")
 
                     if accuracy > best_accuracy and FLAGS.save:
-                        saver.save(sess, FLAGS.checkpoint_subdir + 'best_model_' + FLAGS.model,
+                        saver.save(sess, checkpoint_dir + 'best_model_' + FLAGS.model,
                            global_step=epoch+1)
             else:
                 raise ValueError("Cannot test the model just yet.")

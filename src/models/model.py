@@ -6,7 +6,7 @@ class SNLIModel(object):
     We use various Model classes as usual abstractions to encapsulate tensorflow
     computational graphs.
     """
-    def __init__(self, max_seq_len, use_lens, use_dropout, dropout_rate=-1):
+    def __init__(self, max_seq_len, use_lens, use_dropout, learning_rate, dropout_rate=-1):
         self._max_seq_len = max_seq_len
         self._use_lens = use_lens
         self._use_dropout = use_dropout

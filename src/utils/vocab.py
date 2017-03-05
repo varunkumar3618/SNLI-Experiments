@@ -9,6 +9,7 @@ class Vocab(object):
 
     def __init__(self, snli_dir, vocab_file, max_vocab_size):
         self.vocab_file = vocab_file
+        self.max_vocab_size = max_vocab_size
 
         self.token_id = {}
         self.id_token = {}
