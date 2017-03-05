@@ -4,16 +4,19 @@ from src.models.model import SNLIModel
 from src.utils.ops import get_embedding
 
 
-class SumOfWords(SNLIModel):
+class RNNEncoder(SNLIModel):
     def __init__(self, embedding_matrix, update_embeddings,
-                 hidden_size,
+                 hidden_size, use_peepholes, clip_gradients, max_grad_norm,
                  l2_reg,
                  *args, **kwargs):
-        super(SumOfWords, self).__init__(use_lens=False, use_dropout=True, *args, **kwargs)
+        super(RNNEncoder, self).__init__(use_lens=True, use_dropout=True, *args, **kwargs)
         self._embedding_matrix = embedding_matrix
         self._update_embeddings = update_embeddings
         self._l2_reg = l2_reg
         self._hidden_size = hidden_size
+        self._use_peepholes = use_peepholes
+        self._clip_gradients = clip_gradients
+        self._max_grad_norm = max_grad_norm
 
     def add_prediction_op(self):
         with tf.variable_scope("prediction"):
@@ -34,13 +37,24 @@ class SumOfWords(SNLIModel):
                                        kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                        activation=tf.tanh, name="hyp_proj")
 
-            prem_sow = tf.reduce_sum(prem_proj, axis=1)
-            hyp_sow = tf.reduce_sum(hyp_proj, axis=1)
-            both_sow = tf.concat([prem_sow, hyp_sow], axis=1)
+            cell = tf.contrib.rnn.LSTMCell(
+                self._hidden_size / 2,
+                use_peepholes=self._use_peepholes,
+                initializer=tf.contrib.layers.xavier_initializer()
+            )
+            with tf.variable_scope("prem_encoder"):
+                # Harcoded to use an LSTM
+                _, (_, prem_encoded) = tf.nn.dynamic_rnn(cell, prem_proj, dtype=tf.float32,
+                                                         sequence_length=self.sentence1_lens_placeholder)
+            with tf.variable_scope("hyp_encoder"):
+                # Harcoded to use an LSTM
+                _, (_, hyp_encoded) = tf.nn.dynamic_rnn(cell, hyp_proj, dtype=tf.float32,
+                                                        sequence_length=self.sentence2_lens_placeholder)
 
-            both_sow = tf.layers.dropout(both_sow, self.dropout_placeholder)
+            both_encoded = tf.concat([prem_encoded, hyp_encoded], axis=1)
+            both_encoded = tf.layers.dropout(both_encoded, self.dropout_placeholder)
 
-            h1 = tf.layers.dense(both_sow, self._hidden_size,
+            h1 = tf.layers.dense(both_encoded, self._hidden_size,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                  kernel_regularizer=reg,
                                  activation=tf.tanh, name="h1")
@@ -60,6 +74,15 @@ class SumOfWords(SNLIModel):
             return preds, logits
 
     def add_loss_op(self, pred, logits):
-        loss = super(SumOfWords, self).add_loss_op(pred, logits)\
+        loss = super(RNNEncoder, self).add_loss_op(pred, logits)\
             + tf.reduce_sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
         return loss
+
+    def add_training_op(self, loss):
+        optimizer = tf.train.AdamOptimizer()
+        gradients = optimizer.compute_gradients(loss)
+        if self._clip_gradients:
+            gradient_values = tf.clip_by_global_norm([g[0] for g in gradients], self._max_grad_norm)[0]
+            gradients = [(gv, var) for gv, (_, var) in zip(gradient_values, gradients)]
+        train_op = optimizer.apply_gradients(gradients)
+        return train_op

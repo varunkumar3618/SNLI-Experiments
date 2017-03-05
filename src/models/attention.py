@@ -7,7 +7,7 @@ class AttentionModel(SNLIModel):
     def __init__(self, embedding_matrix, update_embeddings,
                  hidden_size, use_peepholes,
                  *args, **kwargs):
-        super(AttentionModel, self).__init__(use_lens=True, *args, **kwargs)
+        super(AttentionModel, self).__init__(use_lens=True, use_dropout=False, *args, **kwargs)
         self._embedding_matrix = embedding_matrix
         self._update_embeddings = update_embeddings
         self._hidden_size = hidden_size
