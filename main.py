@@ -29,8 +29,8 @@ flags.DEFINE_integer("hidden_size", 200, "The size of the hidden layer, applicab
 flags.DEFINE_boolean("update_embeddings", False, "Whether the word vectors should be updated")
 flags.DEFINE_boolean("use_peepholes", True, "Whether to use peephole connections, applicable to LSTM models.")
 flags.DEFINE_float("dropout_rate", 0.15, "How many units to eliminate during training, applicable to models using dropout.")
-flags.DEFINE_boolean("use_clip_gradients", True, "Whether to clip gradients, applicable to LSTM models.")
-flags.DEFINE_flat("max_grad_norm", 5., "The maxmium norm that gradients should be allowed to take.")
+flags.DEFINE_boolean("clip_gradients", True, "Whether to clip gradients, applicable to LSTM models.")
+flags.DEFINE_float("max_grad_norm", 5., "The maxmium norm that gradients should be allowed to take.")
 
 # Training
 flags.DEFINE_integer("batch_size", 100, "The batch size.")
@@ -113,7 +113,7 @@ def main(_):
                 max_seq_len=FLAGS.max_seq_len,
                 dropout_rate=FLAGS.dropout_rate,
                 use_peepholes=FLAGS.use_peepholes,
-                use_clip_gradients=FLAGS.use_clip_gradients,
+                clip_gradients=FLAGS.clip_gradients,
                 max_grad_norm=FLAGS.max_grad_norm
             )
         elif FLAGS.model == "Attention":
