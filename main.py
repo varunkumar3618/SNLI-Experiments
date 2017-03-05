@@ -36,6 +36,7 @@ flags.DEFINE_float("max_grad_norm", 5., "The maxmium norm that gradients should 
 flags.DEFINE_integer("batch_size", 100, "The batch size.")
 flags.DEFINE_integer("num_epochs", 50, "The numer of epochs to train for.")
 flags.DEFINE_float("l2_reg", 1e-4, "The level of l2 regularization to use.")
+flags.DEFINE_float("learning_rate", 1e-3, "The learning rate.")
 
 flags.DEFINE_boolean("debug", False, "Whether to run in debug mode, i.e. use a smaller dataset and increase verbosity.")
 flags.DEFINE_boolean("train", True, "Whether to train or test the model.")
@@ -102,7 +103,8 @@ def main(_):
                 hidden_size=FLAGS.hidden_size,
                 l2_reg=FLAGS.l2_reg,
                 max_seq_len=FLAGS.max_seq_len,
-                dropout_rate=FLAGS.dropout_rate
+                dropout_rate=FLAGS.dropout_rate,
+                learning_rate=FLAGS.learning_rate
             )
         elif FLAGS.model == "RNN_Encoder":
             model = RNNEncoder(
@@ -114,7 +116,8 @@ def main(_):
                 dropout_rate=FLAGS.dropout_rate,
                 use_peepholes=FLAGS.use_peepholes,
                 clip_gradients=FLAGS.clip_gradients,
-                max_grad_norm=FLAGS.max_grad_norm
+                max_grad_norm=FLAGS.max_grad_norm,
+                learning_rate=FLAGS.learning_rate
             )
         elif FLAGS.model == "Attention":
             model = AttentionModel(
@@ -122,7 +125,8 @@ def main(_):
                 update_embeddings=FLAGS.update_embeddings,
                 hidden_size=FLAGS.hidden_size,
                 use_peepholes=FLAGS.use_peepholes,
-                max_seq_len=FLAGS.max_seq_len
+                max_seq_len=FLAGS.max_seq_len,
+                learning_rate=FLAGS.learning_rate
             )
         else:
             raise ValueError("Unrecognized model: %s." % FLAGS.model)
