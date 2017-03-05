@@ -126,6 +126,8 @@ def main(_):
                 hidden_size=FLAGS.hidden_size,
                 use_peepholes=FLAGS.use_peepholes,
                 max_seq_len=FLAGS.max_seq_len,
+                clip_gradients=FLAGS.clip_gradients,
+                max_grad_norm=FLAGS.max_grad_norm,
                 learning_rate=FLAGS.learning_rate
             )
         else:
