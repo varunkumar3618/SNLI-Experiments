@@ -80,7 +80,7 @@ class RNNEncoder(SNLIModel):
         opt = tf.train.AdamOptimizer()
         grads = opt.compute_gradients(loss)
         if self._clip_gradients:
-            gradient_values = tf.clip_by_global_norm(gradient_values, self._max_grad_norm)[0]
+            gradient_values = tf.clip_by_global_norm([g[0] for g in gradients], self._max_grad_norm)[0]
             gradients = [(gv, var) for gv, (_, var) in zip(gradient_values, gradients)]
         train_op = optimizer.apply_gradients(gradients)
         return train_op
