@@ -6,7 +6,7 @@ from src.utils.ops import get_embedding
 
 class RNNEncoder(SNLIModel):
     def __init__(self, embedding_matrix, update_embeddings,
-                 hidden_size, use_peepholes,
+                 hidden_size, use_peepholes, clip_gradients, max_grad_norm,
                  l2_reg,
                  *args, **kwargs):
         super(RNNEncoder, self).__init__(use_lens=True, use_dropout=True, *args, **kwargs)
@@ -15,6 +15,8 @@ class RNNEncoder(SNLIModel):
         self._l2_reg = l2_reg
         self._hidden_size = hidden_size
         self._use_peepholes = use_peepholes
+        self._clip_gradients = clip_gradients
+        self._max_grad_norm = max_grad_norm
 
     def add_prediction_op(self):
         with tf.variable_scope("prediction"):
@@ -73,3 +75,12 @@ class RNNEncoder(SNLIModel):
         loss = super(RNNEncoder, self).add_loss_op(pred, logits)\
             + tf.reduce_sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
         return loss
+
+    def add_training_op(self, loss):
+        opt = tf.train.AdamOptimizer()
+        grads = opt.compute_gradients(loss)
+        if self._clip_gradients:
+            gradient_values = tf.clip_by_global_norm(gradient_values, self._max_grad_norm)[0]
+            gradients = [(gv, var) for gv, (_, var) in zip(gradient_values, gradients)]
+        train_op = optimizer.apply_gradients(gradients)
+        return train_op
