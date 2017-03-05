@@ -63,12 +63,19 @@ class AttentionModel(SNLIModel):
                 # M.shape => [batch_size, max_len_seq, _hidden_size]
                 M = tf.tanh(tf.tensordot(prem_states, W_y, axes=[[2], [1]]) \
                     + tf.expand_dims(tf.matmul(final_hyp_state, W_h), axis=1))
+                M.set_shape([None, None, self._hidden_size])
 
                 # alpha.shape => [batch_size, max_len_seq]
                 alpha = tf.nn.softmax(tf.tensordot(M, w, axes=1))
-                # r.shape => [batch_size, _hidden_size]
-                r = tf.tensordot(prem_states, alpha, axes=[[2], [0]])
 
+                # r.shape => [batch_size, _hidden_size]
+                # We want each row of alpha to be the linear transformation to apply to its corresponding horizontal "slice" of prem_states.
+                r = tf.tensordot(prem_states, alpha, axes=[[1], [1]])
+
+                # logits.shape => [batch_size, _hidden_size]
+                # BUGGY CODE: tf.matmul(r, W_p) gives an InvalidArgumentError: In[0] is not a matrix
                 logits = tf.tanh(tf.matmul(r, W_p) + tf.matmul(final_hyp_state, W_x))
+
+                # preds.shape => [batch_size, ]
                 preds = tf.argmax(logits, axis=1)
-        return preds, logits
+                return preds, logits
