@@ -37,7 +37,11 @@ class RNNEncoder(SNLIModel):
                                        kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                        activation=tf.tanh, name="hyp_proj")
 
-            cell = tf.contrib.rnn.LSTMCell(self._hidden_size / 2, use_peepholes=self._use_peepholes)
+            cell = tf.contrib.rnn.LSTMCell(
+                self._hidden_size / 2,
+                use_peepholes=self._use_peepholes,
+                initializer=tf.random_normal_initializer(stddev=0.01)
+            )
             with tf.variable_scope("prem_encoder"):
                 prem_states, _ = tf.nn.dynamic_rnn(cell, prem_proj, dtype=tf.float32,
                                                    sequence_length=self.sentence1_lens_placeholder)
