@@ -43,15 +43,13 @@ class RNNEncoder(SNLIModel):
                 initializer=tf.contrib.layers.xavier_initializer()
             )
             with tf.variable_scope("prem_encoder"):
-                prem_states, _ = tf.nn.dynamic_rnn(cell, prem_proj, dtype=tf.float32,
+                # Harcoded to use an LSTM
+                _, (_, hyp_encoded) = tf.nn.dynamic_rnn(cell, prem_proj, dtype=tf.float32,
                                                    sequence_length=self.sentence1_lens_placeholder)
-                prem_encoded = tf.squeeze(tf.slice(prem_states, [0, tf.shape(prem_states)[1]-1, 0],
-                                                   [-1, 1, -1]), axis=[1])
             with tf.variable_scope("hyp_encoder"):
-                hyp_states, _ = tf.nn.dynamic_rnn(cell, hyp_proj, dtype=tf.float32,
+                # Harcoded to use an LSTM
+                _, (_, hyp_encoded) = tf.nn.dynamic_rnn(cell, hyp_proj, dtype=tf.float32,
                                                   sequence_length=self.sentence2_lens_placeholder)
-                hyp_encoded = tf.squeeze(tf.slice(hyp_states, [0, tf.shape(hyp_states)[1]-1, 0],
-                                                  [-1, 1, -1]), axis=[1])
 
             both_encoded = tf.concat([prem_encoded, hyp_encoded], axis=1)
             both_encoded = tf.layers.dropout(both_encoded, self.dropout_placeholder)
