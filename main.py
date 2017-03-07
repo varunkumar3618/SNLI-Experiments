@@ -94,7 +94,7 @@ def main(_):
 
     with tf.Graph().as_default():
         vocab = Vocab(snli_dir, vocab_file, FLAGS.max_vocab_size)
-        dataset = Dataset(snli_dir, data_file, regular_debug_data_file, vocab,
+        dataset = Dataset(snli_dir, regular_data_file, debug_data_file, vocab,
                           FLAGS.max_seq_len, debug=FLAGS.debug)
         embedding_matrix = get_glove_vectors(glove_file, FLAGS.word_embed_dim, vocab)
 
