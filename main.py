@@ -130,7 +130,8 @@ def main(_):
                 max_seq_len=FLAGS.max_seq_len,
                 clip_gradients=FLAGS.clip_gradients,
                 max_grad_norm=FLAGS.max_grad_norm,
-                learning_rate=FLAGS.learning_rate
+                learning_rate=FLAGS.learning_rate,
+                l2_reg=FLAGS.l2_reg
             )
         else:
             raise ValueError("Unrecognized model: %s." % FLAGS.model)
