@@ -7,7 +7,7 @@ class AttentionModel(SNLIModel):
     def __init__(self, embedding_matrix, update_embeddings,
                  hidden_size, use_peepholes,
                  *args, **kwargs):
-        super(AttentionModel, self).__init__(use_lens=True, use_dropout=False, *args, **kwargs)
+        super(AttentionModel, self).__init__(use_lens=True, use_dropout=True, *args, **kwargs)
         self._embedding_matrix = embedding_matrix
         self._update_embeddings = update_embeddings
         self._hidden_size = hidden_size
@@ -22,6 +22,16 @@ class AttentionModel(SNLIModel):
                                        self._update_embeddings)
             hyp_embed = get_embedding(self.sentence2_placeholder, self._embedding_matrix,
                                       self._update_embeddings, reuse=True)
+
+            prem_embed = tf.layers.dropout(prem_embed, self.dropout_placeholder)
+            hyp_embed = tf.layers.dropout(hyp_embed, self.dropout_placeholder)
+
+            prem_proj = tf.layers.dense(prem_embed, self._hidden_size,
+                                        kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                        activation=tf.tanh, name="prem_proj")
+            hyp_proj = tf.layers.dense(hyp_embed, self._hidden_size,
+                                       kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                       activation=tf.tanh, name="hyp_proj")
 
             # Use LSTMs to run through the entire premise and hypothesis vectors.
             # Initialize the initial hidden state of the hypothesis LSTM using the final premise
