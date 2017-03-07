@@ -80,6 +80,6 @@ class AttentionModel(SNLIModel):
                 # r.shape => [batch_size, _hidden_size]
                 r = tf.reduce_sum(prem_states * tf.expand_dims(alpha, axis=2), axis=1)
 
-                logits = tf.tanh(tf.matmul(r, W_p) + tf.matmul(final_hyp_state, W_x))
+                logits = tf.tanh(tf.matmul(r, W_p) + tf.matmul(final_hyp_hidden, W_x))
                 preds = tf.argmax(logits, axis=1)
         return preds, logits
