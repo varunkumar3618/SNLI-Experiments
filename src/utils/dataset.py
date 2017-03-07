@@ -8,7 +8,9 @@ import numpy as np
 
 
 class Dataset(object):
-    def __init__(self, snli_dir, data_file, vocab, max_seq_length, debug=False):
+    def __init__(self, snli_dir, regular_data_file, debug_data_file, vocab,
+                 max_seq_length, debug=False):
+        data_file = debug_data_file if debug else regular_data_file
         if os.path.isfile(data_file)\
                 and self._file_is_valid(data_file, vocab, max_seq_length, debug):
             with open(data_file, "r") as f:

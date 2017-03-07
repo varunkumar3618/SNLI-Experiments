@@ -46,7 +46,8 @@ FLAGS = flags.FLAGS
 
 snli_dir = os.path.join(FLAGS.data_dir, "snli_1.0")
 vocab_file = os.path.join(FLAGS.data_dir, "vocab.txt")
-data_file = os.path.join(FLAGS.data_dir, "data.pkl")
+regular_data_file = os.path.join(FLAGS.data_dir, "data.pkl")
+debug_data_file = os.path.join(FLAGS.data_dir, "debug_data.pkl")
 checkpoint_dir = os.path.join(FLAGS.data_dir, FLAGS.checkpoint_subdir)
 
 if FLAGS.glove_type == "wiki":
@@ -93,7 +94,8 @@ def main(_):
 
     with tf.Graph().as_default():
         vocab = Vocab(snli_dir, vocab_file, FLAGS.max_vocab_size)
-        dataset = Dataset(snli_dir, data_file, vocab, FLAGS.max_seq_len, debug=FLAGS.debug)
+        dataset = Dataset(snli_dir, regular_data_file, debug_data_file, vocab,
+                          FLAGS.max_seq_len, debug=FLAGS.debug)
         embedding_matrix = get_glove_vectors(glove_file, FLAGS.word_embed_dim, vocab)
 
         if FLAGS.model == "SOW":
@@ -124,8 +126,12 @@ def main(_):
                 embedding_matrix=embedding_matrix,
                 update_embeddings=FLAGS.update_embeddings,
                 hidden_size=FLAGS.hidden_size,
-                use_peepholes=FLAGS.use_peepholes,
+                l2_reg=FLAGS.l2_reg,
                 max_seq_len=FLAGS.max_seq_len,
+                dropout_rate=FLAGS.dropout_rate,
+                use_peepholes=FLAGS.use_peepholes,
+                clip_gradients=FLAGS.clip_gradients,
+                max_grad_norm=FLAGS.max_grad_norm,
                 learning_rate=FLAGS.learning_rate
             )
         else:
