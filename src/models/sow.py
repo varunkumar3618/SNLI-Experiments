@@ -29,9 +29,11 @@ class SumOfWords(SNLIModel):
 
             prem_proj = tf.layers.dense(prem_embed, self._hidden_size / 2,
                                         kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                        kernel_regularizer=reg,
                                         activation=tf.tanh, name="prem_proj")
             hyp_proj = tf.layers.dense(hyp_embed, self._hidden_size / 2,
                                        kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                       kernel_regularizer=reg,
                                        activation=tf.tanh, name="hyp_proj")
 
             prem_sow = tf.reduce_sum(prem_proj, axis=1)
