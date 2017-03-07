@@ -28,9 +28,6 @@ def get_glove_vectors(glove_file, dim, vocab):
             matrix[vocab.id_for_token(token)] = np.asarray(data)
             found_set.add(token)
 
-    for token in vocab.token_id.keys():
-        if token not in found_set:
-            print "WARNING: %s was not found in the Glove file. Its embedding will be set to zero."\
-                % token
-
+    print "WARNING: %s tokens were not found in the Glove file. Their embeddings will be set to zero."\
+        % (len(vocab.token_id.keys()) - len(found_set))
     return matrix
