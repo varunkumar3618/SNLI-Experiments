@@ -29,11 +29,11 @@ class AttentionModel(SNLIModel):
             prem_embed = tf.layers.dropout(prem_embed, self.dropout_placeholder)
             hyp_embed = tf.layers.dropout(hyp_embed, self.dropout_placeholder)
 
-            prem_proj = tf.layers.dense(prem_embed, self._hidden_size,
+            prem_proj = tf.layers.dense(prem_embed, self._hidden_size / 2,
                                         kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                         kernel_regularizer=reg,
                                         activation=tf.tanh, name="prem_proj")
-            hyp_proj = tf.layers.dense(hyp_embed, self._hidden_size,
+            hyp_proj = tf.layers.dense(hyp_embed, self._hidden_size / 2,
                                        kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                        kernel_regularizer=reg,
                                        activation=tf.tanh, name="hyp_proj")
@@ -42,7 +42,7 @@ class AttentionModel(SNLIModel):
             # Initialize the initial hidden state of the hypothesis LSTM using the final premise
             # hidden state.
             cell = tf.contrib.rnn.LSTMCell(
-                self._hidden_size,
+                self._hidden_size / 2,
                 use_peepholes=self._use_peepholes,
                 initializer=tf.contrib.layers.xavier_initializer()
             )
