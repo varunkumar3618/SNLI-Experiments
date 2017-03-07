@@ -66,7 +66,7 @@ class RNNEncoder(SNLIModel):
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                  kernel_regularizer=reg,
                                  activation=tf.tanh, name="h3")
-            logits = tf.layers.dense(h3, self._hidden_size,
+            logits = tf.layers.dense(h3, 3,
                                      kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                      kernel_regularizer=reg,
                                      name="logits")
