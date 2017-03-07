@@ -126,12 +126,13 @@ def main(_):
                 embedding_matrix=embedding_matrix,
                 update_embeddings=FLAGS.update_embeddings,
                 hidden_size=FLAGS.hidden_size,
-                use_peepholes=FLAGS.use_peepholes,
+                l2_reg=FLAGS.l2_reg,
                 max_seq_len=FLAGS.max_seq_len,
+                dropout_rate=FLAGS.dropout_rate,
+                use_peepholes=FLAGS.use_peepholes,
                 clip_gradients=FLAGS.clip_gradients,
                 max_grad_norm=FLAGS.max_grad_norm,
-                learning_rate=FLAGS.learning_rate,
-                l2_reg=FLAGS.l2_reg
+                learning_rate=FLAGS.learning_rate
             )
         else:
             raise ValueError("Unrecognized model: %s." % FLAGS.model)
