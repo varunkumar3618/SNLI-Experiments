@@ -28,23 +28,27 @@ class AttentionModel(SNLIModel):
             # hidden state.
             cell = tf.contrib.rnn.LSTMCell(self._hidden_size, use_peepholes=self._use_peepholes)
             with tf.variable_scope("prem_encoder"):
+                # project embedding matrix to have _hidden_size dimension
+                prem_proj = tf.layers.dense(prem_embed, self._hidden_size,
+                                kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                activation=tf.tanh, name="prem_proj")
+
                 # prem_states.shape => [batch_size, max_len_seq, _hidden_size]
                 prem_states, prem_final_state \
-                  = tf.nn.dynamic_rnn(cell, prem_embed, dtype=tf.float32,
+                  = tf.nn.dynamic_rnn(cell, prem_proj, dtype=tf.float32,
                                       sequence_length=self.sentence1_lens_placeholder)
 
             # TODO(kennyleung): determine whether a fresh instance of the LSTMCell is needed.
             # Also, consider using a delimiter and running through one LSTM instance as in the paper.
             with tf.variable_scope("hyp_encoder"):
                 # hyp_states.shape => [batch_size, max_len_seq, _hidden_size]
-                hyp_states, _ = tf.nn.dynamic_rnn(cell, hyp_embed, initial_state=prem_final_state,
-                                                  sequence_length=self.sentence2_lens_placeholder)
+                hyp_proj = tf.layers.dense(hyp_embed, self._hidden_size,
+                                kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                activation=tf.tanh, name="hyp_proj")
 
-                # LSTM final state is a Tensor of shape [batch_size, _hidden_size] squeezed and sliced
-                # from hyp_states[:, -1, :].
-                final_hyp_state = tf.squeeze(
-                    tf.slice(hyp_states, begin=[0, tf.shape(hyp_states)[1] - 1, 0], size=[-1, 1, -1])
-                )
+                hyp_states, (_, final_hyp_state)\
+                      = tf.nn.dynamic_rnn(cell, hyp_proj, initial_state=prem_final_state,
+                                          sequence_length=self.sentence2_lens_placeholder)
 
             with tf.variable_scope("attention"):
                 W_y = tf.get_variable("W_y", shape=[self._hidden_size, self._hidden_size],
@@ -61,7 +65,7 @@ class AttentionModel(SNLIModel):
                 # Matrix-multiply each horizontal slice of prem_states by weight matrix W_y,
                 # and use broadcasting to add outer(W_h*h_n, e_L).
                 # M.shape => [batch_size, max_len_seq, _hidden_size]
-                M = tf.tanh(tf.tensordot(prem_states, W_y, axes=[[2], [1]]) \
+                M = tf.tanh(tf.tensordot(prem_states, W_y, axes=1) \
                     + tf.expand_dims(tf.matmul(final_hyp_state, W_h), axis=1))
                 M.set_shape([None, None, self._hidden_size])
 
