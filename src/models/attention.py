@@ -61,24 +61,28 @@ class AttentionModel(SNLIModel):
                                       initializer=tf.contrib.layers.xavier_initializer())
                 W_h = tf.get_variable("W_h", shape=[self._hidden_size, self._hidden_size],
                                       initializer=tf.contrib.layers.xavier_initializer())
-                w = tf.get_variable("w", shape=[self._hidden_size],
-                                    initializer=tf.contrib.layers.xavier_initializer())
-                W_p = tf.get_variable("W_p", shape=[self._hidden_size, self._hidden_size],
-                                      initializer=tf.contrib.layers.xavier_initializer())
-                W_x = tf.get_variable("W_x", shape=[self._hidden_size, self._hidden_size],
-                                      initializer=tf.contrib.layers.xavier_initializer())
+                #w = tf.get_variable("w", shape=[self._hidden_size],
+                #                     initializer=tf.contrib.layers.xavier_initializer())
+                # W_p = tf.get_variable("W_p", shape=[self._hidden_size, self._hidden_size],
+                #                       initializer=tf.contrib.layers.xavier_initializer())
+                # W_x = tf.get_variable("W_x", shape=[self._hidden_size, self._hidden_size],
+                #                       initializer=tf.contrib.layers.xavier_initializer())
 
                 # Matrix-multiply each horizontal slice of prem_states by weight matrix W_y,
                 # and use broadcasting to add outer(W_h*h_n, e_L).
                 # M.shape => [batch_size, max_len_seq, _hidden_size]
-                M = tf.tanh(tf.tensordot(prem_states, W_y, axes=1) \
-                    + tf.expand_dims(tf.matmul(final_hyp_state, W_h), axis=1))
-                M.set_shape([None, None, self._hidden_size])
+                # M = tf.tanh(tf.tensordot(prem_states, W_y, axes=1) \
+                #     + tf.expand_dims(tf.matmul(final_hyp_state, W_h), axis=1))
+                # M = tf.ones_like(prem_proj)
+                # w = tf.ones(shape=[self._hidden_size])
+                # M.set_shape([None, None, self._hidden_size])
 
                 # alpha.shape => [batch_size, max_len_seq]
-                alpha = tf.nn.softmax(tf.tensordot(M, w, axes=1))
-                # r.shape => [batch_size, _hidden_size]
-                r = tf.reduce_sum(prem_states * tf.expand_dims(alpha, axis=2), axis=1)
+                # alpha = tf.nn.softmax(tf.tensordot(M, w, axes=1))
+                # # r.shape => [batch_size, _hidden_size]
+                # r = tf.reduce_sum(prem_states * tf.expand_dims(alpha, axis=2), axis=1)
+
+                r = tf.reduce_sum(tf.tensordot(prem_states, W_y, axes=1) + tf.tensordot(hyp_states, axes=1), axis=1)
 
                 logits = tf.tanh(tf.matmul(r, W_p) + tf.matmul(final_hyp_state, W_x))
                 preds = tf.argmax(logits, axis=1)
