@@ -50,17 +50,22 @@ class WBWCell(tf.contrib.rnn.RNNCell):
                                       name="r_state")
             r = r_subject + r_state
 
-            return r, r
+        return r, r
 
 class WBWModel(AttentionModel):
     def _attention(self, prem_hiddens, prem_final_state, hyp_hiddens, hyp_final_state):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         hyp_final_hidden = hyp_final_state[1]
         with tf.variable_scope("attention"):
-            att_cell = WBWCell(self._hidden_size, prem_hiddens, tf.contrib.layers.xavier_initializer(), reg)
+            att_cell = WBWCell(
+                self._hidden_size,
+                prem_hiddens,
+                tf.contrib.layers.xavier_initializer(),
+                reg
+            )
             with tf.variable_scope("attention"):
-                _, (_, r_final) = tf.nn.dynamic_rnn(att_cell, hyp_hiddens, dtype=tf.float32,
-                                                    sequence_length=self.sentence2_lens_placeholder)
+                _, r_final = tf.nn.dynamic_rnn(att_cell, hyp_hiddens, dtype=tf.float32,
+                                               sequence_length=self.sentence2_lens_placeholder)
                 h_star = tf.layers.dense(tf.concat([r_final, hyp_final_hidden], axis=1),
                                          self._hidden_size,
                                          kernel_initializer=tf.contrib.layers.xavier_initializer(),
