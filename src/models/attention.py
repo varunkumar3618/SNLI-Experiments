@@ -87,7 +87,7 @@ class AttentionModel(SNLIModel):
                                      name="h_star")
         return h_star
 
-    def _classification(self, repr):
+    def _classification(self, h_star):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         with tf.variable_scope("classification"):
             logits = tf.layers.dense(h_star, 3,
