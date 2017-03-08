@@ -50,7 +50,7 @@ class WBWCell(tf.contrib.rnn.RNNCell):
                                       name="r_state")
             r = r_subject + r_state
 
-            return r
+            return r, r
 
 class WBWModel(AttentionModel):
     def _attention(self, prem_hiddens, prem_final_state, hyp_hiddens, hyp_final_state):
