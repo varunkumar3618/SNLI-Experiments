@@ -108,7 +108,7 @@ def main(_):
                 dropout_rate=FLAGS.dropout_rate,
                 learning_rate=FLAGS.learning_rate
             )
-        elif FLAGS.model == "RNN_Encoder":
+        elif FLAGS.model == "RNNE":
             model = RNNEncoder(
                 embedding_matrix=embedding_matrix,
                 update_embeddings=FLAGS.update_embeddings,
@@ -121,7 +121,7 @@ def main(_):
                 max_grad_norm=FLAGS.max_grad_norm,
                 learning_rate=FLAGS.learning_rate
             )
-        elif FLAGS.model == "Attention":
+        elif FLAGS.model == "ATT":
             model = AttentionModel(
                 embedding_matrix=embedding_matrix,
                 update_embeddings=FLAGS.update_embeddings,
