@@ -133,7 +133,9 @@ def main(_):
                 use_peepholes=FLAGS.use_peepholes,
                 clip_gradients=FLAGS.clip_gradients,
                 max_grad_norm=FLAGS.max_grad_norm,
-                learning_rate=FLAGS.learning_rate
+                learning_rate=FLAGS.learning_rate,
+                train_unseen_vocab=FLAGS.train_unseen_vocab,
+                missing_indices=missing_indices
             )
         elif FLAGS.model == "ATT":
             model = AttentionModel(
@@ -146,7 +148,9 @@ def main(_):
                 use_peepholes=FLAGS.use_peepholes,
                 clip_gradients=FLAGS.clip_gradients,
                 max_grad_norm=FLAGS.max_grad_norm,
-                learning_rate=FLAGS.learning_rate
+                learning_rate=FLAGS.learning_rate,
+                train_unseen_vocab=FLAGS.train_unseen_vocab,
+                missing_indices=missing_indices
             )
         elif FLAGS.model == "WBW":
             model = WBWModel(
