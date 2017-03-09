@@ -6,7 +6,7 @@ from src.utils.ops import get_embedding, matmul_3d_1d, matmul_3d_2d
 class AttentionModel(SNLIModel):
     def __init__(self, embedding_matrix, update_embeddings,
                  hidden_size, use_peepholes,
-                 l2_reg,
+                 l2_reg, train_unseen_vocab, missing_indices,
                  *args, **kwargs):
         super(AttentionModel, self).__init__(use_lens=True, use_dropout=True, *args, **kwargs)
         self._embedding_matrix = embedding_matrix
@@ -14,6 +14,8 @@ class AttentionModel(SNLIModel):
         self._hidden_size = hidden_size
         self._use_peepholes = use_peepholes
         self._l2_reg = l2_reg
+        self._train_unseen_vocab = train_unseen_vocab
+        self._missing_indices = missing_indices
 
     def _embedding(self):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
@@ -21,9 +23,11 @@ class AttentionModel(SNLIModel):
             # Premise and hypothesis embedding tensors, both with shape
             # [batch_size, max_len_seq, word_embed_dim]
             prem_embed = get_embedding(self.sentence1_placeholder, self._embedding_matrix,
-                                       self._update_embeddings)
+                                       self._update_embeddings, self._train_unseen_vocab,
+                                       self._missing_indices)
             hyp_embed = get_embedding(self.sentence2_placeholder, self._embedding_matrix,
-                                      self._update_embeddings, reuse=True)
+                                      self._update_embeddings, self._train_unseen_vocab,
+                                      self._missing_indices, reuse=True)
 
             prem_embed = tf.layers.dropout(prem_embed, self.dropout_placeholder)
             hyp_embed = tf.layers.dropout(hyp_embed, self.dropout_placeholder)

@@ -7,22 +7,26 @@ from src.utils.ops import get_embedding
 class SumOfWords(SNLIModel):
     def __init__(self, embedding_matrix, update_embeddings,
                  hidden_size,
-                 l2_reg,
+                 l2_reg, train_unseen_vocab, missing_indices,
                  *args, **kwargs):
         super(SumOfWords, self).__init__(use_dropout=True, *args, **kwargs)
         self._embedding_matrix = embedding_matrix
         self._update_embeddings = update_embeddings
         self._l2_reg = l2_reg
         self._hidden_size = hidden_size
+        self._train_unseen_vocab = train_unseen_vocab
+        self._missing_indices = missing_indices
 
     def add_prediction_op(self):
         with tf.variable_scope("prediction"):
             reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
-
+        
             prem_embed = get_embedding(self.sentence1_placeholder, self._embedding_matrix,
-                                       self._update_embeddings)
+                                       self._update_embeddings, self._train_unseen_vocab,
+                                       self._missing_indices)
             hyp_embed = get_embedding(self.sentence2_placeholder, self._embedding_matrix,
-                                      self._update_embeddings, reuse=True)
+                                      self._update_embeddings, self._train_unseen_vocab,
+                                      self._missing_indices, reuse=True)
 
             prem_embed = tf.layers.dropout(prem_embed, self.dropout_placeholder)
             hyp_embed = tf.layers.dropout(hyp_embed, self.dropout_placeholder)

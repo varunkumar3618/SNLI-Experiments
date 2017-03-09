@@ -2,9 +2,21 @@ import tensorflow as tf
 import numpy as np
 from test_utils import test_all_close
 
-def get_embedding(indices, embedding_matrix, update_embeddings, reuse=False):
+def get_embedding(indices, embedding_matrix, update_embeddings, 
+                  train_unseen_vocab=False, missing_indices=None, reuse=False):
     with tf.variable_scope("embeddings", reuse=reuse):
-        if update_embeddings:
+        if train_unseen_vocab:
+            fixed_embedding = tf.constant(embedding_matrix, dtype=tf.float32)
+            trainable_embedding = tf.get_variable("new_embed", 
+                                        initializer=tf.contrib.layers.xavier_initializer(), 
+                                        shape=embedding_matrix.shape)
+            
+            print "Embedding shape and len", embedding_matrix.shape, len(embedding_matrix)
+            missing_one_hot = np.zeros(len(embedding_matrix))
+            missing_one_hot[missing_indices] = 1
+            missing = tf.expand_dims(tf.constant(missing_one_hot, dtype=tf.float32), axis=1)
+            embeddings = fixed_embedding + tf.multiply(missing, trainable_embedding)
+        elif update_embeddings:
             embeddings = tf.get_variable(
                 "E",
                 initializer=tf.constant(embedding_matrix, dtype=tf.float32)

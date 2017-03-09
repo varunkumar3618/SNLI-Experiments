@@ -22,6 +22,7 @@ flags.DEFINE_string("glove_type", "common", "The source of the Glove word vector
 
 # Data
 flags.DEFINE_integer("max_vocab_size", 10000, "The maximum size of the vocabulary.")
+flags.DEFINE_boolean("train_unseen_vocab", True, "Whether to train word vectors for words not in GloVe")
 flags.DEFINE_integer("max_seq_len", 100, "The maximum length of a sentence. Sentences longer than this will be truncated.")
 
 # Model
@@ -46,9 +47,15 @@ flags.DEFINE_boolean("save", True, "Whether to save the model periodically")
 FLAGS = flags.FLAGS
 
 snli_dir = os.path.join(FLAGS.data_dir, "snli_1.0")
-vocab_file = os.path.join(FLAGS.data_dir, "vocab.txt")
-regular_data_file = os.path.join(FLAGS.data_dir, "data.pkl")
-debug_data_file = os.path.join(FLAGS.data_dir, "debug_data.pkl")
+if FLAGS.train_unseen_vocab:
+    vocab_file = os.path.join(FLAGS.data_dir, "vocab_all.txt")
+    regular_data_file = os.path.join(FLAGS.data_dir, "data_all.pkl")
+    debug_data_file = os.path.join(FLAGS.data_dir, "debug_data_all.pkl")
+else:
+    vocab_file = os.path.join(FLAGS.data_dir, "vocab.txt")
+    regular_data_file = os.path.join(FLAGS.data_dir, "data.pkl")
+    debug_data_file = os.path.join(FLAGS.data_dir, "debug_data.pkl")
+
 checkpoint_dir = os.path.join(FLAGS.data_dir, FLAGS.checkpoint_subdir)
 
 if FLAGS.glove_type == "wiki":
@@ -94,10 +101,14 @@ def main(_):
         os.makedirs('./data/model/')
 
     with tf.Graph().as_default():
-        vocab = Vocab(snli_dir, vocab_file, FLAGS.max_vocab_size)
+        print "Vocab"
+        vocab = Vocab(snli_dir, vocab_file, FLAGS.max_vocab_size, FLAGS.train_unseen_vocab)
+        print "Dataset"
         dataset = Dataset(snli_dir, regular_data_file, debug_data_file, vocab,
                           FLAGS.max_seq_len, debug=FLAGS.debug)
-        embedding_matrix = get_glove_vectors(glove_file, FLAGS.word_embed_dim, vocab)
+        print "Embedding matrix"
+        embedding_matrix, missing_indices\
+                = get_glove_vectors(glove_file, FLAGS.word_embed_dim, vocab)
 
         if FLAGS.model == "SOW":
             model = SumOfWords(
@@ -107,7 +118,9 @@ def main(_):
                 l2_reg=FLAGS.l2_reg,
                 max_seq_len=FLAGS.max_seq_len,
                 dropout_rate=FLAGS.dropout_rate,
-                learning_rate=FLAGS.learning_rate
+                learning_rate=FLAGS.learning_rate,
+                train_unseen_vocab=FLAGS.train_unseen_vocab,
+                missing_indices=missing_indices
             )
         elif FLAGS.model == "RNNE":
             model = RNNEncoder(

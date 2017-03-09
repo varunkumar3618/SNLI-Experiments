@@ -11,6 +11,7 @@ GloVe data: http://nlp.stanford.edu/data/glove.6B.zip
 
 def get_glove_vectors(glove_file, dim, vocab):
     matrix = np.zeros([vocab.size(), dim])
+    missing_indices = set([x for x in xrange(vocab.size())])
     found_set = set()
 
     with open(glove_file) as ifs:
@@ -25,9 +26,12 @@ def get_glove_vectors(glove_file, dim, vocab):
             data = [float(x) for x in row[1:]]
             if len(data) != dim:
                 raise RuntimeError("wrong number of dimensions")
-            matrix[vocab.id_for_token(token)] = np.asarray(data)
+            index = vocab.id_for_token(token)
+            matrix[index] = np.asarray(data)
+            missing_indices.remove(index)
             found_set.add(token)
+            
 
     print "WARNING: %s tokens were not found in the Glove file. Their embeddings will be set to zero."\
         % (len(vocab.token_id.keys()) - len(found_set))
-    return matrix
+    return matrix, list(missing_indices)
