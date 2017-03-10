@@ -7,8 +7,7 @@ from src.utils.ops import get_embedding
 class SumOfWords(SNLIModel):
 
     def __init__(self, embedding_matrix, update_embeddings,
-                 hidden_size,
-                 l2_reg,
+                 hidden_size, l2_reg,
                  use_dropout=True,
                  *args, **kwargs):
         super(SumOfWords, self).__init__(
