@@ -11,6 +11,15 @@ class WBWCell(tf.contrib.rnn.RNNCell):
         self._initializer = initializer
         self._regularizer = regularizer
 
+        # A hack to make regularization work
+        with tf.variable_scope(type(self).__name__) as scope:
+            self._scope = scope
+            _ = self(
+                tf.zeros_like(subject),
+                tf.zeros(shape=[tf.shape(subject)[0], self._hidden_size], dtype=subject.dtype)
+            )
+            self._scope.reuse_variables()
+
     @property
     def state_size(self):
         return self._hidden_size
@@ -20,9 +29,10 @@ class WBWCell(tf.contrib.rnn.RNNCell):
         return self._hidden_size
 
     def __call__(self, inputs, state, scope=None):
-        scope = scope or type(self).__name__
+        if scope is not None:
+            raise ValueError("This cell does not use the scope argument.")
 
-        with tf.variable_scope(scope):
+        with tf.variable_scope(self._scope):
             M_prem = tf.layers.dense(self._subject, self._hidden_size,
                                      kernel_initializer=self._initializer,
                                      kernel_regularizer=self._regularizer,

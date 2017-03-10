@@ -109,7 +109,7 @@ class SNLIModel(object):
                 logits=logits,
                 labels=self.labels_placeholder)
             )
-            + tf.reduce_sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
+            + tf.reduce_sum(sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)))
         )
 
     def add_acc_op(self, pred):
