@@ -5,11 +5,11 @@ from src.utils.ops import get_embedding, matmul_3d_1d, matmul_3d_2d
 
 
 class WBWCell(tf.contrib.rnn.RNNCell):
-    def __init__(self, hidden_size, subject, initializer, l2_reg):
+    def __init__(self, hidden_size, subject, initializer, regularizer):
         self._hidden_size = hidden_size
         self._subject = subject
         self._initializer = initializer
-        self._l2_reg = l2_reg
+        self._regularizer = regularizer
 
     @property
     def state_size(self):
@@ -23,30 +23,29 @@ class WBWCell(tf.contrib.rnn.RNNCell):
         scope = scope or type(self).__name__
 
         with tf.variable_scope(scope):
-            reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
             M_prem = tf.layers.dense(self._subject, self._hidden_size,
                                      kernel_initializer=self._initializer,
-                                     kernel_regularizer=reg,
+                                     kernel_regularizer=self._regularizer,
                                      name="M_prem")
             M_in = tf.layers.dense(inputs, self._hidden_size,
                                    kernel_initializer=self._initializer,
-                                   kernel_regularizer=reg,
+                                   kernel_regularizer=self._regularizer,
                                    name="M_in")
             M_state = tf.layers.dense(state, self._hidden_size,
                                       kernel_initializer=self._initializer,
-                                      kernel_regularizer=reg,
+                                      kernel_regularizer=self._regularizer,
                                       name="M_state")
             M = tf.tanh(M_prem + tf.expand_dims(M_in, axis=1) + tf.expand_dims(M_state, axis=1))
 
             A = tf.layers.dense(M, 1, kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                                kernel_regularizer=reg, name="A")
+                                kernel_regularizer=self._regularizer, name="A")
             A = tf.squeeze(A, axis=2)
             alpha = tf.nn.softmax(A)
 
             r_subject = tf.reduce_sum(self._subject * tf.expand_dims(alpha, axis=2), axis=1)
             r_state = tf.layers.dense(state, self._hidden_size,
                                       kernel_initializer=self._initializer,
-                                      kernel_regularizer=reg,
+                                      kernel_regularizer=self._regularizer,
                                       activation=tf.tanh,
                                       name="r_state")
             r = r_subject + r_state
@@ -62,7 +61,7 @@ class WBWModel(AttentionModel):
                 self._hidden_size,
                 prem_hiddens,
                 tf.contrib.layers.xavier_initializer(),
-                self._l2_reg
+                reg
             )
             _, r_final = tf.nn.dynamic_rnn(att_cell, hyp_hiddens, dtype=tf.float32,
                                            sequence_length=self.sentence2_lens_placeholder)
