@@ -74,5 +74,5 @@ class SumOfWords(SNLIModel):
         with tf.variable_scope("prediction"):
             prem_proj, hyp_proj = self.embedding()
             encoded = self.encoding(prem_proj, hyp_proj)
-            preds, logits = self.classification(*encoded)
+            preds, logits = self.classification(encoded)
         return preds, logits
