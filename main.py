@@ -7,6 +7,7 @@ from src.models.sow import SumOfWords
 from src.models.rnn_encoder import RNNEncoder
 from src.models.attention import AttentionModel
 from src.models.wbw import WBWModel
+from src.models.mLSTM import mLSTMModel
 from src.utils.dataset import Dataset
 from src.utils.vocab import Vocab
 from src.utils.wvecs import get_glove_vectors
@@ -133,7 +134,9 @@ def main(_):
                 use_peepholes=FLAGS.use_peepholes,
                 clip_gradients=FLAGS.clip_gradients,
                 max_grad_norm=FLAGS.max_grad_norm,
-                learning_rate=FLAGS.learning_rate
+                learning_rate=FLAGS.learning_rate,
+                train_unseen_vocab=FLAGS.train_unseen_vocab,
+                missing_indices=missing_indices
             )
         elif FLAGS.model == "ATT":
             model = AttentionModel(
@@ -146,7 +149,9 @@ def main(_):
                 use_peepholes=FLAGS.use_peepholes,
                 clip_gradients=FLAGS.clip_gradients,
                 max_grad_norm=FLAGS.max_grad_norm,
-                learning_rate=FLAGS.learning_rate
+                learning_rate=FLAGS.learning_rate,
+                train_unseen_vocab=FLAGS.train_unseen_vocab,
+                missing_indices=missing_indices
             )
         elif FLAGS.model == "WBW":
             model = WBWModel(
@@ -159,7 +164,24 @@ def main(_):
                 use_peepholes=FLAGS.use_peepholes,
                 clip_gradients=FLAGS.clip_gradients,
                 max_grad_norm=FLAGS.max_grad_norm,
-                learning_rate=FLAGS.learning_rate
+                learning_rate=FLAGS.learning_rate,
+                train_unseen_vocab=FLAGS.train_unseen_vocab,
+                missing_indices=missing_indices
+            )
+        elif FLAGS.model == "mLSTM":
+            model = mLSTMModel(
+                embedding_matrix=embedding_matrix,
+                update_embeddings=FLAGS.update_embeddings,
+                hidden_size=FLAGS.hidden_size,
+                l2_reg=FLAGS.l2_reg,
+                max_seq_len=FLAGS.max_seq_len,
+                dropout_rate=FLAGS.dropout_rate,
+                use_peepholes=FLAGS.use_peepholes,
+                clip_gradients=FLAGS.clip_gradients,
+                max_grad_norm=FLAGS.max_grad_norm,
+                learning_rate=FLAGS.learning_rate,
+                train_unseen_vocab=FLAGS.train_unseen_vocab,
+                missing_indices=missing_indices
             )
         else:
             raise ValueError("Unrecognized model: %s." % FLAGS.model)
