@@ -16,5 +16,5 @@ python main.py --word_embed_dim 100 --hidden_size 200 --glove_type wiki
 
 # Visualizing Data with Tensorboard
 
-Results for each run of a model are logged in results/logs/[train|test]/<id>.
-To view the data, run "tensorboard --logdir=results/log/[train|test]/" and navigate to localhost:6006.
+Results for each run of a model are logged in data/logs/[train|test]/<id>.
+To view the data, run "tensorboard --logdir=data/logs/[train|test]/" and navigate to localhost:6006.

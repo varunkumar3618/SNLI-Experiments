@@ -217,15 +217,6 @@ class SNLIModel(object):
         predictions = sess.run(self.pred, feed_dict=feed)
         return predictions
 
-    def summarize_data(self, sess):
-        """Merge the summaries of data collected during the most recent epoch.
-
-        Returns:
-            summary:  A Summary protobuf of the merged data, to be saved to the event file.
-        """
-        summary = sess.run(self.summary_op)
-        return summary
-
     def build(self):
         self.add_placeholders()
         self.pred, self.logits = self.add_prediction_op()

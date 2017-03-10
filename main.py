@@ -19,7 +19,7 @@ flags.DEFINE_string("model", "SOW", "The type of model to train.")
 flags.DEFINE_string("data_dir", "data/", "The location of the data files.")
 flags.DEFINE_string("checkpoint_subdir", "model/", "The checkpoint subdirectory inside data_dir")
 flags.DEFINE_string("glove_type", "common", "The source of the Glove word vectors used: one of 'wiki' and 'common'")
-flags.DEFINE_string("log_dir", "results/logs", "The location of the result log files.")
+flags.DEFINE_string("log_dir", "data/logs", "The location of the result log files.")
 
 # Data
 flags.DEFINE_integer("max_vocab_size", 10000, "The maximum size of the vocabulary.")
