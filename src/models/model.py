@@ -6,7 +6,7 @@ class SNLIModel(object):
     We use various Model classes as usual abstractions to encapsulate tensorflow
     computational graphs.
     """
-    def __init__(self, learning_rate, max_seq_len, use_lens=False, use_dropout=False,
+    def __init__(self, learning_rate, max_seq_len, train_writer, use_lens=False, use_dropout=False,
                  dropout_rate=-1, clip_gradients=False, max_grad_norm=-1):
         self._max_seq_len = max_seq_len
         self._use_lens = use_lens
@@ -14,6 +14,7 @@ class SNLIModel(object):
         self._dropout_rate = dropout_rate
         self._clip_gradients = clip_gradients
         self._max_grad_norm = max_grad_norm
+        self._train_writer = train_writer
 
     def add_placeholders(self):
         """Adds placeholder variables to tensorflow computational graph.
@@ -100,8 +101,10 @@ class SNLIModel(object):
         Returns:
             loss: A 0-d tensor (scalar) output
         """
-        return tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
+        loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
             logits=logits, labels=self.labels_placeholder))
+        tf.summary.scalar('loss', loss)
+        return loss
 
     def add_acc_op(self, pred):
         """Adds Ops for the accuracy to the computational graph.
@@ -111,7 +114,17 @@ class SNLIModel(object):
         Returns:
             acc: A 0-d tensor (scalar) output
         """
-        return tf.contrib.metrics.accuracy(pred, self.labels_placeholder)
+        accuracy = tf.contrib.metrics.accuracy(pred, self.labels_placeholder)
+        tf.summary.scalar('accuracy', accuracy)
+        return accuracy
+
+    def add_summary_op(self, loss, accuracy):
+        """Adds the Op to generate summary data.
+
+        Returns:
+            summary_op: A serialized Tensor<string> containing the Summary protobuf
+        """
+        return tf.summary.merge_all()
 
     def add_training_op(self, loss):
         """Sets up the training Ops.
@@ -137,7 +150,7 @@ class SNLIModel(object):
         train_op = optimizer.apply_gradients(gradients)
         return train_op
 
-    def train_on_batch(self, sess,
+    def train_on_batch(self, sess, epoch_num,
                        sentence1_batch, sentence1_lens_batch,
                        sentence2_batch, sentence2_lens_batch,
                        labels_batch):
@@ -156,10 +169,11 @@ class SNLIModel(object):
         feed = self.create_feed_dict(sentence1_batch, sentence1_lens_batch,
                                      sentence2_batch, sentence2_lens_batch,
                                      labels_batch, train_mode=True)
-        _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
+        _, loss, summary = sess.run([self.train_op, self.loss, self.summary_op], feed_dict=feed)
+        self._train_writer.add_summary(summary, epoch_num)
         return loss
 
-    def evaluate_on_batch(self, sess,
+    def evaluate_on_batch(self, sess, epoch_num,
                           sentence1_batch, sentence1_lens_batch,
                           sentence2_batch, sentence2_lens_batch,
                           labels_batch):
@@ -179,7 +193,9 @@ class SNLIModel(object):
         feed = self.create_feed_dict(sentence1_batch, sentence1_lens_batch,
                                      sentence2_batch, sentence2_lens_batch,
                                      labels_batch, train_mode=False)
-        return sess.run([self.acc_op, self.loss], feed_dict=feed)
+        accuracy, loss, summary = sess.run([self.acc_op, self.loss, self.summary_op], feed_dict=feed)
+        self._train_writer.add_summary(summary, epoch_num)
+        return accuracy, loss
 
     def predict_on_batch(self, sess,
                          sentence1_batch, sentence1_lens_batch,
@@ -201,9 +217,19 @@ class SNLIModel(object):
         predictions = sess.run(self.pred, feed_dict=feed)
         return predictions
 
+    def summarize_data(self, sess):
+        """Merge the summaries of data collected during the most recent epoch.
+
+        Returns:
+            summary:  A Summary protobuf of the merged data, to be saved to the event file.
+        """
+        summary = sess.run(self.summary_op)
+        return summary
+
     def build(self):
         self.add_placeholders()
         self.pred, self.logits = self.add_prediction_op()
         self.loss = self.add_loss_op(self.pred, self.logits)
         self.train_op = self.add_training_op(self.loss)
         self.acc_op = self.add_acc_op(self.pred)
+        self.summary_op = self.add_summary_op(self.loss, self.acc_op)

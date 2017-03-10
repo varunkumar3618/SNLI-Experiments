@@ -19,6 +19,7 @@ flags.DEFINE_string("model", "SOW", "The type of model to train.")
 flags.DEFINE_string("data_dir", "data/", "The location of the data files.")
 flags.DEFINE_string("checkpoint_subdir", "model/", "The checkpoint subdirectory inside data_dir")
 flags.DEFINE_string("glove_type", "common", "The source of the Glove word vectors used: one of 'wiki' and 'common'")
+flags.DEFINE_string("log_dir", "results/logs", "The location of the result log files.")
 
 # Data
 flags.DEFINE_integer("max_vocab_size", 10000, "The maximum size of the vocabulary.")
@@ -66,11 +67,11 @@ def run_train_epoch(sess, model, dataset, epoch_num):
     print "Epoch: %s" % (epoch_num + 1)
     prog = Progbar(target=dataset.split_num_batches("train", FLAGS.batch_size))
     for i, batch in enumerate(dataset.get_shuffled_iterator("train", FLAGS.batch_size)):
-        loss = model.train_on_batch(sess, *batch)
+        loss = model.train_on_batch(sess, epoch_num, *batch)
         prog.update(i + 1, [("train loss", loss)])
     print "="*79
 
-def run_eval_epoch(sess, model, dataset, split):
+def run_eval_epoch(sess, model, dataset, split, epoch_num):
     batch_sizes = []
     accuracies = []
 
@@ -78,7 +79,7 @@ def run_eval_epoch(sess, model, dataset, split):
     print "Evaluating on %s." % split
     prog = Progbar(target=dataset.split_num_batches(split, FLAGS.batch_size))
     for i, batch in enumerate(dataset.get_iterator(split, FLAGS.batch_size)):
-        acc, loss = model.evaluate_on_batch(sess, *batch)
+        acc, loss = model.evaluate_on_batch(sess, epoch_num, *batch)
         prog.update(i + 1, [("%s loss" % split, loss)])
 
         batch_sizes.append(batch[0].shape[0])
@@ -98,6 +99,7 @@ def main(_):
         dataset = Dataset(snli_dir, regular_data_file, debug_data_file, vocab,
                           FLAGS.max_seq_len, debug=FLAGS.debug)
         embedding_matrix = get_glove_vectors(glove_file, FLAGS.word_embed_dim, vocab)
+        train_writer = tf.summary.FileWriter(FLAGS.log_dir + '/train')
 
         if FLAGS.model == "SOW":
             model = SumOfWords(
@@ -107,7 +109,8 @@ def main(_):
                 l2_reg=FLAGS.l2_reg,
                 max_seq_len=FLAGS.max_seq_len,
                 dropout_rate=FLAGS.dropout_rate,
-                learning_rate=FLAGS.learning_rate
+                learning_rate=FLAGS.learning_rate,
+                train_writer=train_writer
             )
         elif FLAGS.model == "RNNE":
             model = RNNEncoder(
@@ -120,7 +123,8 @@ def main(_):
                 use_peepholes=FLAGS.use_peepholes,
                 clip_gradients=FLAGS.clip_gradients,
                 max_grad_norm=FLAGS.max_grad_norm,
-                learning_rate=FLAGS.learning_rate
+                learning_rate=FLAGS.learning_rate,
+                train_writer=train_writer
             )
         elif FLAGS.model == "ATT":
             model = AttentionModel(
@@ -133,7 +137,8 @@ def main(_):
                 use_peepholes=FLAGS.use_peepholes,
                 clip_gradients=FLAGS.clip_gradients,
                 max_grad_norm=FLAGS.max_grad_norm,
-                learning_rate=FLAGS.learning_rate
+                learning_rate=FLAGS.learning_rate,
+                train_writer=train_writer
             )
         elif FLAGS.model == "WBW":
             model = WBWModel(
@@ -146,7 +151,8 @@ def main(_):
                 use_peepholes=FLAGS.use_peepholes,
                 clip_gradients=FLAGS.clip_gradients,
                 max_grad_norm=FLAGS.max_grad_norm,
-                learning_rate=FLAGS.learning_rate
+                learning_rate=FLAGS.learning_rate,
+                train_writer=train_writer
             )
         else:
             raise ValueError("Unrecognized model: %s." % FLAGS.model)
@@ -164,13 +170,13 @@ def main(_):
                 best_accuracy = 0
                 for epoch in range(FLAGS.num_epochs):
                     run_train_epoch(sess, model, dataset, epoch)
-                    accuracy = run_eval_epoch(sess, model, dataset, "train" if FLAGS.debug else "dev")
-
+                    accuracy = run_eval_epoch(sess, model, dataset, "train" if FLAGS.debug else "dev", epoch)
                     if accuracy > best_accuracy and FLAGS.save:
                         saver.save(sess, checkpoint_dir + 'best_model_' + FLAGS.model,
-                           global_step=epoch+1)
+                           global_step=epoch+1) 
             else:
                 raise ValueError("Cannot test the model just yet.")
+            train_writer.close()  
 
 if __name__ == "__main__":
     tf.app.run()
