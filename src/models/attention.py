@@ -25,8 +25,8 @@ class AttentionModel(SNLIModel):
             hyp_embed = get_embedding(self.sentence2_placeholder, self._embedding_matrix,
                                       self._update_embeddings, reuse=True)
 
-            prem_embed = tf.layers.dropout(prem_embed, self.dropout_placeholder)
-            hyp_embed = tf.layers.dropout(hyp_embed, self.dropout_placeholder)
+            prem_embed = self.apply_dropout(prem_embed)
+            hyp_embed = self.apply_dropout(hyp_embed)
 
             prem_proj = tf.layers.dense(prem_embed, self._hidden_size,
                                         kernel_initializer=tf.contrib.layers.xavier_initializer(),
