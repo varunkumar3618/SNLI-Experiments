@@ -53,7 +53,7 @@ class WBWCell(tf.contrib.rnn.RNNCell):
         return r, r
 
 class WBWModel(AttentionModel):
-    def _attention(self, prem_hiddens, prem_final_state, hyp_hiddens, hyp_final_state):
+    def attention(self, prem_hiddens, prem_final_state, hyp_hiddens, hyp_final_state):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         hyp_final_hidden = hyp_final_state[1]
         with tf.variable_scope("attention"):

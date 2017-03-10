@@ -7,15 +7,17 @@ class AttentionModel(SNLIModel):
     def __init__(self, embedding_matrix, update_embeddings,
                  hidden_size, use_peepholes,
                  l2_reg,
+                 use_lens=True, use_dropout=True,
                  *args, **kwargs):
-        super(AttentionModel, self).__init__(use_lens=True, use_dropout=True, *args, **kwargs)
+        super(AttentionModel, self).__init__(use_lens=use_lens, use_dropout=use_dropout,
+                                             *args, **kwargs)
         self._embedding_matrix = embedding_matrix
         self._update_embeddings = update_embeddings
         self._hidden_size = hidden_size
         self._use_peepholes = use_peepholes
         self._l2_reg = l2_reg
 
-    def _embedding(self):
+    def embedding(self):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         with tf.variable_scope("embedding"):
             # Premise and hypothesis embedding tensors, both with shape
@@ -38,7 +40,7 @@ class AttentionModel(SNLIModel):
                                        activation=tf.tanh, name="hyp_proj")
         return prem_proj, hyp_proj
 
-    def _encoding(self, prem_proj, hyp_proj):
+    def encoding(self, prem_proj, hyp_proj):
         with tf.variable_scope("encoding"):
             cell = tf.contrib.rnn.LSTMCell(
                 self._hidden_size,
@@ -59,7 +61,7 @@ class AttentionModel(SNLIModel):
                                         sequence_length=self.sentence2_lens_placeholder)
         return prem_hiddens, prem_final_state, hyp_hiddens, hyp_final_state
 
-    def _attention(self, prem_hiddens, prem_final_state, hyp_hiddens, hyp_final_state):
+    def attention(self, prem_hiddens, prem_final_state, hyp_hiddens, hyp_final_state):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         hyp_final_hidden = hyp_final_state[1]
         with tf.variable_scope("attention"):
@@ -87,7 +89,7 @@ class AttentionModel(SNLIModel):
                                      name="h_star")
         return h_star
 
-    def _classification(self, h_star):
+    def classification(self, h_star):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         with tf.variable_scope("classification"):
             logits = tf.layers.dense(h_star, 3,
@@ -99,8 +101,9 @@ class AttentionModel(SNLIModel):
 
     def add_prediction_op(self):
         with tf.variable_scope("prediction"):
-            embedded = self._embedding()
-            encoded = self._encoding(*embedded)
-            h_star = self._attention(*encoded)
-            preds, logits = self._classification(h_star)
+            prem_proj, hyp_proj = self.embedding()
+            prem_hiddens, prem_final_state, hyp_hiddens, hyp_final_state\
+                = self.encoding(prem_proj, hyp_proj)
+            h_star = self.attention(prem_hiddens, prem_final_state, hyp_hiddens, hyp_final_state)
+            preds, logits = self.classification(h_star)
         return preds, logits
