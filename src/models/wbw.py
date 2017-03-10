@@ -63,13 +63,12 @@ class WBWModel(AttentionModel):
                 tf.contrib.layers.xavier_initializer(),
                 reg
             )
-            with tf.variable_scope("attention"):
-                _, r_final = tf.nn.dynamic_rnn(att_cell, hyp_hiddens, dtype=tf.float32,
-                                               sequence_length=self.sentence2_lens_placeholder)
-                h_star = tf.layers.dense(tf.concat([r_final, hyp_final_hidden], axis=1),
-                                         self._hidden_size,
-                                         kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                                         kernel_regularizer=reg,
-                                         activation=tf.tanh,
-                                         name="h_star")
+            _, r_final = tf.nn.dynamic_rnn(att_cell, hyp_hiddens, dtype=tf.float32,
+                                           sequence_length=self.sentence2_lens_placeholder)
+            h_star = tf.layers.dense(tf.concat([r_final, hyp_final_hidden], axis=1),
+                                     self._hidden_size,
+                                     kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                     kernel_regularizer=reg,
+                                     activation=tf.tanh,
+                                     name="h_star")
         return h_star
