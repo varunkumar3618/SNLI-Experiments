@@ -118,7 +118,7 @@ class SNLIModel(object):
         tf.summary.scalar('accuracy', accuracy)
         return accuracy
 
-    def add_summary_op(self, loss, accuracy):
+    def add_summary_op(self):
         """Adds the Op to generate summary data.
 
         Returns:
@@ -223,4 +223,4 @@ class SNLIModel(object):
         self.loss = self.add_loss_op(self.pred, self.logits)
         self.train_op = self.add_training_op(self.loss)
         self.acc_op = self.add_acc_op(self.pred)
-        self.summary_op = self.add_summary_op(self.loss, self.acc_op)
+        self.summary_op = self.add_summary_op()

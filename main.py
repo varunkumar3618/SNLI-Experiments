@@ -163,6 +163,7 @@ def main(_):
             saver = tf.train.Saver()
 
         with tf.Session() as sess:
+            train_writer.add_graph(sess.graph)
             sess.run(tf.global_variables_initializer())
             sess.run(tf.local_variables_initializer())
 
