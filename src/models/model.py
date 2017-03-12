@@ -15,6 +15,7 @@ class SNLIModel(object):
         self._clip_gradients = clip_gradients
         self._max_grad_norm = max_grad_norm
         self._train_writer = train_writer
+        self._confusion_matrix = None
 
     def add_placeholders(self):
         """Adds placeholder variables to tensorflow computational graph.
@@ -116,6 +117,7 @@ class SNLIModel(object):
         """
         accuracy = tf.contrib.metrics.accuracy(pred, self.labels_placeholder)
         tf.summary.scalar('accuracy', accuracy)
+        self._confusion_matrix = tf.confusion_matrix(self.labels_placeholder, pred)
         return accuracy
 
     def add_summary_op(self):
@@ -193,9 +195,9 @@ class SNLIModel(object):
         feed = self.create_feed_dict(sentence1_batch, sentence1_lens_batch,
                                      sentence2_batch, sentence2_lens_batch,
                                      labels_batch, train_mode=False)
-        accuracy, loss, summary = sess.run([self.acc_op, self.loss, self.summary_op], feed_dict=feed)
+        accuracy, loss, summary, cm = sess.run([self.acc_op, self.loss, self.summary_op, self._confusion_matrix], feed_dict=feed)
         self._train_writer.add_summary(summary, epoch_num)
-        return accuracy, loss
+        return accuracy, loss, cm
 
     def predict_on_batch(self, sess,
                          sentence1_batch, sentence1_lens_batch,
@@ -216,6 +218,11 @@ class SNLIModel(object):
                                      train_mode=False)
         predictions = sess.run(self.pred, feed_dict=feed)
         return predictions
+
+    def get_confusion_matrix(self):
+        """Returns the confusion matrix."""
+        assert self._confusion_matrix is not None
+        return self._confusion_matrix
 
     def build(self):
         self.add_placeholders()

@@ -7,6 +7,7 @@ from src.models.sow import SumOfWords
 from src.models.rnn_encoder import RNNEncoder
 from src.models.attention import AttentionModel
 from src.models.wbw import WBWModel
+from src.utils.confusion_matrix import output_confusion_matrix
 from src.utils.dataset import Dataset
 from src.utils.vocab import Vocab
 from src.utils.wvecs import get_glove_vectors
@@ -79,7 +80,7 @@ def run_eval_epoch(sess, model, dataset, split, epoch_num):
     print "Evaluating on %s." % split
     prog = Progbar(target=dataset.split_num_batches(split, FLAGS.batch_size))
     for i, batch in enumerate(dataset.get_iterator(split, FLAGS.batch_size)):
-        acc, loss = model.evaluate_on_batch(sess, epoch_num, *batch)
+        acc, loss, cm = model.evaluate_on_batch(sess, epoch_num, *batch)
         prog.update(i + 1, [("%s loss" % split, loss)])
 
         batch_sizes.append(batch[0].shape[0])
@@ -88,7 +89,7 @@ def run_eval_epoch(sess, model, dataset, split, epoch_num):
     accuracy = np.average(accuracies, weights=batch_sizes)
     print "Accuracy: %s" % accuracy
     print "-"*79
-    return accuracy
+    return accuracy, cm
 
 def main(_):
     if not os.path.exists('./data/model/'):
@@ -171,13 +172,16 @@ def main(_):
                 best_accuracy = 0
                 for epoch in range(FLAGS.num_epochs):
                     run_train_epoch(sess, model, dataset, epoch)
-                    accuracy = run_eval_epoch(sess, model, dataset, "train" if FLAGS.debug else "dev", epoch)
+                    accuracy, cm = run_eval_epoch(sess, model, dataset, "train" if FLAGS.debug else "dev", epoch)
                     if accuracy > best_accuracy and FLAGS.save:
                         saver.save(sess, checkpoint_dir + 'best_model_' + FLAGS.model,
-                           global_step=epoch+1) 
+                           global_step=epoch+1)
+                    # TODO: Change this based on when we want to output our confusion matrix, flag-ify the output location.
+                    output_confusion_matrix(cm, FLAGS.log_dir +
+                        "/confusion-epoch-{}.png".format(epoch))
             else:
                 raise ValueError("Cannot test the model just yet.")
-            train_writer.close()  
+            train_writer.close()
 
 if __name__ == "__main__":
     tf.app.run()
