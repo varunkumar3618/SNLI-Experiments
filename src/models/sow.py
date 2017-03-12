@@ -5,27 +5,28 @@ from src.utils.ops import get_embedding
 
 
 class SumOfWords(SNLIModel):
+
     def __init__(self, embedding_matrix, update_embeddings,
-                 hidden_size,
-                 l2_reg,
+                 hidden_size, l2_reg,
+                 use_dropout=True,
                  *args, **kwargs):
-        super(SumOfWords, self).__init__(use_dropout=True, *args, **kwargs)
+        super(SumOfWords, self).__init__(
+            use_dropout=use_dropout, *args, **kwargs)
         self._embedding_matrix = embedding_matrix
         self._update_embeddings = update_embeddings
         self._l2_reg = l2_reg
         self._hidden_size = hidden_size
 
-    def add_prediction_op(self):
-        with tf.variable_scope("prediction"):
-            reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
-
+    def embedding(self):
+        reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
+        with tf.variable_scope("embedding"):
             prem_embed = get_embedding(self.sentence1_placeholder, self._embedding_matrix,
                                        self._update_embeddings)
             hyp_embed = get_embedding(self.sentence2_placeholder, self._embedding_matrix,
                                       self._update_embeddings, reuse=True)
 
-            prem_embed = tf.layers.dropout(prem_embed, self.dropout_placeholder)
-            hyp_embed = tf.layers.dropout(hyp_embed, self.dropout_placeholder)
+            prem_embed = self.apply_dropout(prem_embed)
+            hyp_embed = self.apply_dropout(hyp_embed)
 
             prem_proj = tf.layers.dense(prem_embed, self._hidden_size / 2,
                                         kernel_initializer=tf.contrib.layers.xavier_initializer(),
@@ -36,13 +37,20 @@ class SumOfWords(SNLIModel):
                                        kernel_regularizer=reg,
                                        activation=tf.tanh, name="hyp_proj")
 
+        return prem_proj, hyp_proj
+
+    def encoding(self, prem_proj, hyp_proj):
+        with tf.variable_scope("encoding"):
             prem_sow = tf.reduce_sum(prem_proj, axis=1)
             hyp_sow = tf.reduce_sum(hyp_proj, axis=1)
             both_sow = tf.concat([prem_sow, hyp_sow], axis=1)
+            both_sow = self.apply_dropout(both_sow)
+        return both_sow
 
-            both_sow = tf.layers.dropout(both_sow, self.dropout_placeholder)
-
-            h1 = tf.layers.dense(both_sow, self._hidden_size,
+    def classification(self, encoded):
+        reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
+        with tf.variable_scope("classification"):
+            h1 = tf.layers.dense(encoded, self._hidden_size,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                  kernel_regularizer=reg,
                                  activation=tf.tanh, name="h1")
@@ -61,7 +69,9 @@ class SumOfWords(SNLIModel):
             preds = tf.argmax(logits, axis=1)
             return preds, logits
 
-    def add_loss_op(self, pred, logits):
-        loss = super(SumOfWords, self).add_loss_op(pred, logits)\
-            + tf.reduce_sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
-        return loss
+    def add_prediction_op(self):
+        with tf.variable_scope("prediction"):
+            prem_proj, hyp_proj = self.embedding()
+            encoded = self.encoding(prem_proj, hyp_proj)
+            preds, logits = self.classification(encoded)
+        return preds, logits
