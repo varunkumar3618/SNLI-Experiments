@@ -47,7 +47,7 @@ class WBWCell(tf.contrib.rnn.RNNCell):
                                       name="M_state")
             M = tf.tanh(M_prem + tf.expand_dims(M_in, axis=1) + tf.expand_dims(M_state, axis=1))
 
-            A = tf.layers.dense(M, 1, kernel_initializer=tf.contrib.layers.xavier_initializer(),
+            A = tf.layers.dense(M, 1, kernel_initializer=self._initializer,
                                 kernel_regularizer=self._regularizer, name="A")
             A = tf.squeeze(A, axis=2)
             alpha = tf.nn.softmax(A)
@@ -70,14 +70,14 @@ class WBWModel(AttentionModel):
             att_cell = WBWCell(
                 self._hidden_size,
                 prem_hiddens,
-                tf.contrib.layers.xavier_initializer(),
+                self.dense_init,
                 reg
             )
             _, r_final = tf.nn.dynamic_rnn(att_cell, hyp_hiddens, dtype=tf.float32,
                                            sequence_length=self.sentence2_lens_placeholder)
             h_star = tf.layers.dense(tf.concat([r_final, hyp_final_hidden], axis=1),
                                      self._hidden_size,
-                                     kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                     kernel_initializer=self.dense_init,
                                      kernel_regularizer=reg,
                                      activation=tf.tanh,
                                      name="h_star")

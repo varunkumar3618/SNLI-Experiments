@@ -16,7 +16,7 @@ class RNNEncoder(SumOfWords):
             cell = tf.contrib.rnn.LSTMCell(
                 self._hidden_size / 2,
                 use_peepholes=self._use_peepholes,
-                initializer=tf.contrib.layers.xavier_initializer()
+                initializer=self.rec_init
             )
             with tf.variable_scope("prem"):
                 # Harcoded to use an LSTM

@@ -31,13 +31,13 @@ class AttentionModel(SNLIModel):
             hyp_embed = self.apply_dropout(hyp_embed)
 
             prem_proj = tf.layers.dense(prem_embed, self._hidden_size,
-                                        kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                        kernel_initializer=self.dense_init,
                                         kernel_regularizer=reg,
-                                        activation=tf.tanh, name="prem_proj")
+                                        activation=self.activation, name="prem_proj")
             hyp_proj = tf.layers.dense(hyp_embed, self._hidden_size,
-                                       kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                       kernel_initializer=self.dense_init,
                                        kernel_regularizer=reg,
-                                       activation=tf.tanh, name="hyp_proj")
+                                       activation=self.activation, name="hyp_proj")
         return prem_proj, hyp_proj
 
     def encoding(self, prem_proj, hyp_proj):
@@ -45,7 +45,7 @@ class AttentionModel(SNLIModel):
             cell = tf.contrib.rnn.LSTMCell(
                 self._hidden_size,
                 use_peepholes=self._use_peepholes,
-                initializer=tf.contrib.layers.xavier_initializer()
+                initializer=self.rec_init
             )
             with tf.variable_scope("prem_encoder"):
                 # prem_states.shape => [batch_size, max_len_seq, _hidden_size]
@@ -66,16 +66,16 @@ class AttentionModel(SNLIModel):
         hyp_final_hidden = hyp_final_state[1]
         with tf.variable_scope("attention"):
             M_prem = tf.layers.dense(prem_hiddens, self._hidden_size,
-                                     kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                     kernel_initializer=self.dense_init,
                                      kernel_regularizer=reg,
                                      name="M_prem")
             M_hyp_final = tf.layers.dense(hyp_final_hidden, self._hidden_size,
-                                          kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                          kernel_initializer=self.dense_init,
                                           kernel_regularizer=reg,
                                           name="M_hyp_final")
-            M = tf.tanh(M_prem + tf.expand_dims(M_hyp_final, axis=1))
+            M = self.activation(M_prem + tf.expand_dims(M_hyp_final, axis=1))
 
-            A = tf.layers.dense(M, 1, kernel_initializer=tf.contrib.layers.xavier_initializer(),
+            A = tf.layers.dense(M, 1, kernel_initializer=self.dense_init,
                                 kernel_regularizer=reg, name="A")
             A = tf.squeeze(A, axis=2)
             alpha = tf.nn.softmax(A)
@@ -83,9 +83,9 @@ class AttentionModel(SNLIModel):
             r = tf.reduce_sum(prem_hiddens * tf.expand_dims(alpha, axis=2), axis=1)
 
             h_star = tf.layers.dense(tf.concat([r, hyp_final_hidden], 1), self._hidden_size,
-                                     kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                     kernel_initializer=self.dense_init,
                                      kernel_regularizer=reg,
-                                     activation=tf.tanh,
+                                     activation=self.activation,
                                      name="h_star")
         return h_star
 
@@ -93,7 +93,7 @@ class AttentionModel(SNLIModel):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         with tf.variable_scope("classification"):
             logits = tf.layers.dense(h_star, 3,
-                                     kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                     kernel_initializer=self.dense_init,
                                      kernel_regularizer=reg,
                                      name="logits")
             preds = tf.argmax(logits, axis=1)
