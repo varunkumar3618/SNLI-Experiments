@@ -11,7 +11,7 @@ def get_activation(activation):
 def get_initializer(init):
     if init == "xavier":
         return tf.contrib.layers.xavier_initializer()
-    elif init == "oth":
+    elif init == "orth":
         return tf.orthogonal_initializer()
     else:
         raise ValueError("Unsupported initializer: %s." % init)
