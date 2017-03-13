@@ -48,14 +48,13 @@ class Vocab(object):
             assert token not in self.token_id, "dup entry for token [%s]" % token
             assert idx not in self.id_token, "dup entry for idx [%s]" % idx
             if idx == 0:
-                assert token == "PAD", "expect id 0 to be [PAD] not [%s]" % token
+                assert token == "_PAD_", "expect id 0 to be [_PAD_] not [%s]" % token
             if idx == 1:
-                assert token == "UNK", "expect id 1 to be [UNK] not [%s]" % token
+                assert token == "_UNK_", "expect id 1 to be [_UNK_] not [%s]" % token
             self.token_id[token] = idx
             self.id_token[idx] = token
 
     def create_vocab(self, dataset_path, vocab_path, max_vocab_size, train_unseen_vocab):
-
         print("generating vocab from dataset at {}".format(dataset_path))
         all_words = []
         for dataset in ["snli_1.0_train.jsonl", "snli_1.0_dev.jsonl", "snli_1.0_test.jsonl"]:
@@ -68,7 +67,7 @@ class Vocab(object):
         count_pairs = sorted(counter.items(), key=lambda x: (-x[1], x[0]))
 
         words, _ = list(zip(*count_pairs))
-        words = ["PAD"] + ["UNK"] + list(words)
+        words = ["_PAD_"] + ["_UNK_"] + list(words)
         if not train_unseen_vocab:
             word_to_id = dict(zip(words[:max_vocab_size], range(max_vocab_size)))
         else:
@@ -81,7 +80,7 @@ class Vocab(object):
             for word, id in word_to_id.items():
                 file.write("{}\t{}\n".format(word, id))
 
-        print("vocab of size {} written to {}, with PAD token == 0, UNK token == 1".format(
+        print("vocab of size {} written to {}, with _PAD_ token == 0, _UNK_ token == 1".format(
             vocab_size, vocab_path))
 
     def size(self):
@@ -118,7 +117,7 @@ class Vocab(object):
             return self.id_token[id]
         else:
             print("ID not in vocab, returning <UNK>")
-            return self.UNK_ID
+            return self.id_token[self.UNK_ID]
 
     def tokens_for_ids(self, ids):
         return [self.token_for_id(x) for x in ids]

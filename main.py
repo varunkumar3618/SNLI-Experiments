@@ -33,6 +33,9 @@ flags.DEFINE_boolean("use_peepholes", True, "Whether to use peephole connections
 flags.DEFINE_float("dropout_rate", 0.15, "How many units to eliminate during training, applicable to models using dropout.")
 flags.DEFINE_boolean("clip_gradients", True, "Whether to clip gradients, applicable to LSTM models.")
 flags.DEFINE_float("max_grad_norm", 5., "The maxmium norm that gradients should be allowed to take.")
+flags.DEFINE_string("activation", "tanh", "The activation to use in dense layers.")
+flags.DEFINE_string("dense_init", "xavier", "The initializer to use in dense layers.")
+flags.DEFINE_string("rec_init", "xavier", "The initializer to use in recurrent layers.")
 
 # Training
 flags.DEFINE_integer("batch_size", 100, "The batch size.")
@@ -96,6 +99,40 @@ def run_eval_epoch(sess, model, dataset, split):
     print "-"*79
     return accuracy
 
+def get_model(vocab):
+    print "Embedding matrix"
+    embedding_matrix, missing_indices\
+            = get_glove_vectors(glove_file, FLAGS.word_embed_dim, vocab)
+    
+    kwargs = {
+        "embedding_matrix": embedding_matrix,
+        "update_embeddings": FLAGS.update_embeddings,
+        "hidden_size": FLAGS.hidden_size,
+        "l2_reg": FLAGS.l2_reg,
+        "max_seq_len": FLAGS.max_seq_len,
+        "dropout_rate": FLAGS.dropout_rate,
+        "learning_rate": FLAGS.learning_rate,
+        "clip_gradients": FLAGS.clip_gradients,
+        "max_grad_norm": FLAGS.max_grad_norm,
+        "activation": FLAGS.activation,
+        "dense_init": FLAGS.dense_init,
+        "rec_init": FLAGS.rec_init
+    }
+    if FLAGS.model == "SOW":
+        return SumOfWords(**kwargs)
+    elif FLAGS.model == "RNNE":
+        kwargs["use_peepholes"] = FLAGS.use_peepholes
+        return RNNEncoder(**kwargs)
+    elif FLAGS.model == "ATT":
+        kwargs["use_peepholes"] = FLAGS.use_peepholes
+        return AttentionModel(**kwargs)
+    elif FLAGS.model == "WBW":
+        kwargs["use_peepholes"] = FLAGS.use_peepholes
+        return WBWModel(**kwargs)
+    else:
+        raise ValueError("Unrecognized model: %s." % FLAGS.model)
+
+
 def main(_):
     if not os.path.exists('./data/model/'):
         os.makedirs('./data/model/')
@@ -106,63 +143,8 @@ def main(_):
         print "Dataset"
         dataset = Dataset(snli_dir, regular_data_file, debug_data_file, vocab,
                           FLAGS.max_seq_len, debug=FLAGS.debug)
-        print "Embedding matrix"
-        embedding_matrix, missing_indices\
-                = get_glove_vectors(glove_file, FLAGS.word_embed_dim, vocab)
 
-        if FLAGS.model == "SOW":
-            model = SumOfWords(
-                embedding_matrix=embedding_matrix,
-                update_embeddings=FLAGS.update_embeddings,
-                hidden_size=FLAGS.hidden_size,
-                l2_reg=FLAGS.l2_reg,
-                max_seq_len=FLAGS.max_seq_len,
-                dropout_rate=FLAGS.dropout_rate,
-                learning_rate=FLAGS.learning_rate,
-                train_unseen_vocab=FLAGS.train_unseen_vocab,
-                missing_indices=missing_indices
-            )
-        elif FLAGS.model == "RNNE":
-            model = RNNEncoder(
-                embedding_matrix=embedding_matrix,
-                update_embeddings=FLAGS.update_embeddings,
-                hidden_size=FLAGS.hidden_size,
-                l2_reg=FLAGS.l2_reg,
-                max_seq_len=FLAGS.max_seq_len,
-                dropout_rate=FLAGS.dropout_rate,
-                use_peepholes=FLAGS.use_peepholes,
-                clip_gradients=FLAGS.clip_gradients,
-                max_grad_norm=FLAGS.max_grad_norm,
-                learning_rate=FLAGS.learning_rate
-            )
-        elif FLAGS.model == "ATT":
-            model = AttentionModel(
-                embedding_matrix=embedding_matrix,
-                update_embeddings=FLAGS.update_embeddings,
-                hidden_size=FLAGS.hidden_size,
-                l2_reg=FLAGS.l2_reg,
-                max_seq_len=FLAGS.max_seq_len,
-                dropout_rate=FLAGS.dropout_rate,
-                use_peepholes=FLAGS.use_peepholes,
-                clip_gradients=FLAGS.clip_gradients,
-                max_grad_norm=FLAGS.max_grad_norm,
-                learning_rate=FLAGS.learning_rate
-            )
-        elif FLAGS.model == "WBW":
-            model = WBWModel(
-                embedding_matrix=embedding_matrix,
-                update_embeddings=FLAGS.update_embeddings,
-                hidden_size=FLAGS.hidden_size,
-                l2_reg=FLAGS.l2_reg,
-                max_seq_len=FLAGS.max_seq_len,
-                dropout_rate=FLAGS.dropout_rate,
-                use_peepholes=FLAGS.use_peepholes,
-                clip_gradients=FLAGS.clip_gradients,
-                max_grad_norm=FLAGS.max_grad_norm,
-                learning_rate=FLAGS.learning_rate
-            )
-        else:
-            raise ValueError("Unrecognized model: %s." % FLAGS.model)
+        model = get_model(vocab)
         model.build()
 
         saver = None
