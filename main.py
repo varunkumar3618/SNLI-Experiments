@@ -52,18 +52,20 @@ snli_dir = os.path.join(FLAGS.data_dir, "snli_1.0")
 vocab_file = os.path.join(FLAGS.data_dir, "vocab.txt")
 regular_data_file = os.path.join(FLAGS.data_dir, "data.pkl")
 debug_data_file = os.path.join(FLAGS.data_dir, "debug_data.pkl")
-base_checkpoint_dir = os.path.join(FLAGS.data_dir, "checkpoint")
-checkpoint_dir = os.path.join(base_checkpoint_dir, FLAGS.name)
+base_models_dir = os.path.join(FLAGS.data_dir, "models")
+model_dir = os.path.join(base_models_dir, FLAGS.name)
+checkpoint_dir = os.path.join(model_dir, "checkpoint")
 checkpoint_path = os.path.join(checkpoint_dir, "model.ckpt")
-base_log_dir = os.path.join(FLAGS.data_dir, "log")
-log_dir = os.path.join(base_log_dir, FLAGS.name)
+results_dir = os.path.join(model_dir, "results")
 
-if not os.path.isdir(base_checkpoint_dir):
-    os.mkdir(base_checkpoint_dir)
+if not os.path.isdir(base_models_dir):
+    os.mkdir(base_models_dir)
+if not os.path.isdir(model_dir):
+    os.mkdir(model_dir)
 if not os.path.isdir(checkpoint_dir):
     os.mkdir(checkpoint_dir)
-if not os.path.isdir(base_log_dir):
-    os.mkdir(base_log_dir)
+if not os.path.isdir(results_dir):
+    os.mkdir(results_dir)
 
 if FLAGS.glove_type == "wiki":
     glove_file = os.path.join(os.path.join(FLAGS.data_dir, "glove.6B"), "glove.6B.%sd.txt" % FLAGS.word_embed_dim)
