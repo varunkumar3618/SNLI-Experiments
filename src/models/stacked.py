@@ -76,7 +76,7 @@ class StackedAttentionModel(SNLIModel):
 
             Num_alpha = tf.einsum("aij,aik->ajk", E, x)
             Den_alpha = tf.reduce_sum(E, axis=1)
-            alpha = Num_alpha / tf.expand_dims(Den_alpha, axis=1)
+            alpha = Num_alpha / tf.expand_dims(Den_alpha, axis=2)
         return beta, alpha
 
     def all_attention(self, prem, hyp, scope):
