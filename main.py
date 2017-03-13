@@ -110,7 +110,7 @@ def get_model(vocab):
     }
     if FLAGS.model == "SOW":
         return SumOfWords(**kwargs)
-    elif FLAGS.model == "RNNEncoder":
+    elif FLAGS.model == "RNNE":
         kwargs["use_peepholes"] = FLAGS.use_peepholes
         return RNNEncoder(**kwargs)
     elif FLAGS.model == "ATT":
