@@ -72,16 +72,16 @@ def average_neighbors(matrix, vocab, missing_indices, window_size, dataset_dir):
         print "Working on getting average of neighbors in ", dataset
         count = 0
         for line in open(os.path.join(dataset_dir, dataset), "r").readlines():
-            data = json.loads(line)
-            sentence = word_tokenize(data["sentence1"].lower())
             count += 1
             if count % 100 == 0:
                 print "Working on example %d" % count
             if count % 100000 == 0:
                 dim = matrix.shape[1]
                 with open("glove" + str(count)+ "_" + str(dim), "w") as out:
-                    np.savez(out, matrix=matrix)
-
+                    np.savez(out, matrix=matrix, counts=neighbors_count)
+            data = json.loads(line)
+            sentence = word_tokenize(data["sentence1"].lower())
+            
             for missing_word in missing_words:
                 if missing_word in sentence:
                     missing_sentence_index = sentence.index(missing_word)
