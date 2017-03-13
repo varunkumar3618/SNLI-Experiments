@@ -11,7 +11,6 @@ def get_embedding(indices, embedding_matrix, update_embeddings,
                                         initializer=tf.contrib.layers.xavier_initializer(), 
                                         shape=embedding_matrix.shape)
             
-            print "Embedding shape and len", embedding_matrix.shape, len(embedding_matrix)
             missing_one_hot = np.zeros(len(embedding_matrix))
             missing_one_hot[missing_indices] = 1
             missing = tf.expand_dims(tf.constant(missing_one_hot, dtype=tf.float32), axis=1)

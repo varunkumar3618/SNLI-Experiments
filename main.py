@@ -23,13 +23,17 @@ flags.DEFINE_string("glove_type", "common", "The source of the Glove word vector
 
 # Data
 flags.DEFINE_integer("max_vocab_size", 10000, "The maximum size of the vocabulary.")
-flags.DEFINE_boolean("train_unseen_vocab", True, "Whether to train word vectors for words not in GloVe")
 flags.DEFINE_integer("max_seq_len", 100, "The maximum length of a sentence. Sentences longer than this will be truncated.")
+
+# Word vector embeddings
+flags.DEFINE_boolean("train_unseen_vocab", True, "Whether to train word vectors for words not in GloVe")
+flags.DEFINE_boolean("update_embeddings", False, "Whether the word vectors should be updated")
+flags.DEFINE_boolean("avg_unseen_vocab", False, "Whether to make the embedding of unseen words the average of neighbors")
+flags.DEFINE_integer("window_size", 4, "Size of window to average over if avg avg_unseen_vocab is True")
 
 # Model
 flags.DEFINE_integer("word_embed_dim", 300, "The dimension of the embedding matrix.")
 flags.DEFINE_integer("hidden_size", 200, "The size of the hidden layer, applicable to some models.")
-flags.DEFINE_boolean("update_embeddings", False, "Whether the word vectors should be updated")
 flags.DEFINE_boolean("use_peepholes", True, "Whether to use peephole connections, applicable to LSTM models.")
 flags.DEFINE_float("dropout_rate", 0.15, "How many units to eliminate during training, applicable to models using dropout.")
 flags.DEFINE_boolean("clip_gradients", True, "Whether to clip gradients, applicable to LSTM models.")
@@ -48,7 +52,7 @@ flags.DEFINE_boolean("save", True, "Whether to save the model periodically")
 FLAGS = flags.FLAGS
 
 snli_dir = os.path.join(FLAGS.data_dir, "snli_1.0")
-if FLAGS.train_unseen_vocab:
+if FLAGS.train_unseen_vocab or FLAGS.avg_unseen_vocab:
     vocab_file = os.path.join(FLAGS.data_dir, "vocab_all.txt")
     regular_data_file = os.path.join(FLAGS.data_dir, "data_all.pkl")
     debug_data_file = os.path.join(FLAGS.data_dir, "debug_data_all.pkl")
@@ -103,14 +107,20 @@ def main(_):
 
     with tf.Graph().as_default():
         print "Vocab"
-        vocab = Vocab(snli_dir, vocab_file, FLAGS.max_vocab_size, FLAGS.train_unseen_vocab)
+        if FLAGS.train_unseen_vocab or FLAGS.avg_unseen_vocab:
+            use_all = True
+        else: 
+            use_all = False
+
+        vocab = Vocab(snli_dir, vocab_file, FLAGS.max_vocab_size, use_all)
         print "Dataset"
         dataset = Dataset(snli_dir, regular_data_file, debug_data_file, vocab,
                           FLAGS.max_seq_len, debug=FLAGS.debug)
         print "Embedding matrix"
         embedding_matrix, missing_indices\
-                = get_glove_vectors(glove_file, FLAGS.word_embed_dim, vocab)
-
+                = get_glove_vectors(glove_file, FLAGS.word_embed_dim, vocab, snli_dir, 
+                                    FLAGS.avg_unseen_vocab, FLAGS.window_size)
+        
         if FLAGS.model == "SOW":
             model = SumOfWords(
                 embedding_matrix=embedding_matrix,
