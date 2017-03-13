@@ -103,7 +103,7 @@ class StackedAttentionModel(SNLIModel):
             prem_hiddens, _, hyp_hiddens, _ = self.encoding(prem_proj, hyp_proj, "encoding1")
             prem_att, hyp_att = self.all_attention(prem_hiddens, hyp_hiddens, "attention1")
 
-            prem_proj, hyp_proj = self.projection(prem_att, hyp_att, "projection1")
+            prem_proj, hyp_proj = self.projection(prem_att, hyp_att, "projection2")
             prem_proj, hyp_proj = self.dropout(prem_proj, hyp_proj)
             _, prem_final_state, _, hyp_final_state = self.encoding(prem_att, hyp_att, "encoding2")
             prem_final_hidden, hyp_final_hidden = prem_final_state[1], hyp_final_state[1]
