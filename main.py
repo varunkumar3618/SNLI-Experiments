@@ -26,9 +26,9 @@ flags.DEFINE_integer("max_vocab_size", 10000, "The maximum size of the vocabular
 flags.DEFINE_integer("max_seq_len", 100, "The maximum length of a sentence. Sentences longer than this will be truncated.")
 
 # Word vector embeddings
-flags.DEFINE_boolean("train_unseen_vocab", True, "Whether to train word vectors for words not in GloVe")
+flags.DEFINE_boolean("train_unseen_vocab", False, "Whether to train word vectors for words not in GloVe")
 flags.DEFINE_boolean("update_embeddings", False, "Whether the word vectors should be updated")
-flags.DEFINE_boolean("avg_unseen_vocab", False, "Whether to make the embedding of unseen words the average of neighbors")
+flags.DEFINE_boolean("avg_unseen_vocab", True, "Whether to make the embedding of unseen words the average of neighbors")
 flags.DEFINE_integer("window_size", 4, "Size of window to average over if avg avg_unseen_vocab is True")
 
 # Model
@@ -60,6 +60,9 @@ else:
     vocab_file = os.path.join(FLAGS.data_dir, "vocab.txt")
     regular_data_file = os.path.join(FLAGS.data_dir, "data.pkl")
     debug_data_file = os.path.join(FLAGS.data_dir, "debug_data.pkl")
+
+if FLAGS.word_embed_dim != 300:
+    FLAGS.glove_type = "wiki"
 
 checkpoint_dir = os.path.join(FLAGS.data_dir, FLAGS.checkpoint_subdir)
 
