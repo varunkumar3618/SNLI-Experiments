@@ -7,10 +7,10 @@ from nltk.tokenize import word_tokenize
 
 class Vocab(object):
 
-    def __init__(self, snli_dir, vocab_file, max_vocab_size, train_unseen_vocab):
+    def __init__(self, snli_dir, vocab_file, max_vocab_size, use_all):
         self.vocab_file = vocab_file
         self.max_vocab_size = max_vocab_size
-        self.train_unseen_vocab = train_unseen_vocab
+        self.use_all = use_all
 
         self.token_id = {}
         self.id_token = {}
@@ -19,20 +19,20 @@ class Vocab(object):
         self.seq = 2
 
         if os.path.isfile(vocab_file) and self.has_correct_size(
-                                            vocab_file, max_vocab_size, train_unseen_vocab):
+                                            vocab_file, max_vocab_size, use_all):
             self.load_vocab_from_file(vocab_file)
         else:
-            self.create_vocab(snli_dir, vocab_file, max_vocab_size, train_unseen_vocab)
+            self.create_vocab(snli_dir, vocab_file, max_vocab_size, use_all)
             self.load_vocab_from_file(vocab_file)
 
-    def has_correct_size(self, vocab_file, max_vocab_size, train_unseen_vocab):
+    def has_correct_size(self, vocab_file, max_vocab_size, use_all):
         NUM_WORDS_ALL = 37285
         try:
             with open(vocab_file, "r") as f:
                 size = int(f.readline())
         except:
             return False
-        if not train_unseen_vocab:
+        if not use_all:
             return size == max_vocab_size
         else:
             return size == NUM_WORDS_ALL
@@ -68,7 +68,7 @@ class Vocab(object):
 
         words, _ = list(zip(*count_pairs))
         words = ["_PAD_"] + ["_UNK_"] + list(words)
-        if not train_unseen_vocab:
+        if not use_all:
             word_to_id = dict(zip(words[:max_vocab_size], range(max_vocab_size)))
         else:
             word_to_id = dict(zip(words, range(len(words))))
