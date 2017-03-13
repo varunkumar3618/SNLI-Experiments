@@ -34,7 +34,7 @@ flags.DEFINE_boolean("clip_gradients", True, "Whether to clip gradients, applica
 flags.DEFINE_float("max_grad_norm", 5., "The maxmium norm that gradients should be allowed to take.")
 flags.DEFINE_string("activation", "tanh", "The activation to use in dense layers.")
 flags.DEFINE_string("dense_init", "xavier", "The initializer to use in dense layers.")
-flags.DEFINE_string("rec_init", "orth", "The initializer to use in recurrent layers.")
+flags.DEFINE_string("rec_init", "xavier", "The initializer to use in recurrent layers.")
 
 # Training
 flags.DEFINE_integer("batch_size", 100, "The batch size.")
