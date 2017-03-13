@@ -1,6 +1,7 @@
 import tensorflow as tf
 
 from src.models.model import SNLIModel
+from src.utils.ops import get_embedding
 
 class StackedAttentionModel(SNLIModel):
     def __init__(self, embedding_matrix, update_embeddings,
