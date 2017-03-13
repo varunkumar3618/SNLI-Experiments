@@ -6,6 +6,7 @@ import numpy as np
 from src.models.sow import SumOfWords
 from src.models.rnn_encoder import RNNEncoder
 from src.models.attention import AttentionModel
+from src.models.stacked import StackedAttentionModel
 from src.models.wbw import WBWModel
 from src.utils.dataset import Dataset
 from src.utils.vocab import Vocab
@@ -119,6 +120,9 @@ def get_model(vocab):
     elif FLAGS.model == "WBW":
         kwargs["use_peepholes"] = FLAGS.use_peepholes
         return WBWModel(**kwargs)
+    elif FLAGS.model == "STK":
+        kwargs["use_peepholes"] = FLAGS.use_peepholes
+        return StackedAttentionModel(**kwargs)
     else:
         raise ValueError("Unrecognized model: %s." % FLAGS.model)
 
