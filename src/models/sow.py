@@ -29,13 +29,13 @@ class SumOfWords(SNLIModel):
             hyp_embed = self.apply_dropout(hyp_embed)
 
             prem_proj = tf.layers.dense(prem_embed, self._hidden_size / 2,
-                                        kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                        kernel_initializer=self.dense_init,
                                         kernel_regularizer=reg,
-                                        activation=tf.tanh, name="prem_proj")
+                                        activation=self.activation, name="prem_proj")
             hyp_proj = tf.layers.dense(hyp_embed, self._hidden_size / 2,
-                                       kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                       kernel_initializer=self.dense_init,
                                        kernel_regularizer=reg,
-                                       activation=tf.tanh, name="hyp_proj")
+                                       activation=self.activation, name="hyp_proj")
 
         return prem_proj, hyp_proj
 
@@ -51,19 +51,19 @@ class SumOfWords(SNLIModel):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         with tf.variable_scope("classification"):
             h1 = tf.layers.dense(encoded, self._hidden_size,
-                                 kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                 kernel_initializer=self.dense_init,
                                  kernel_regularizer=reg,
-                                 activation=tf.tanh, name="h1")
+                                 activation=self.activation, name="h1")
             h2 = tf.layers.dense(h1, self._hidden_size,
-                                 kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                 kernel_initializer=self.dense_init,
                                  kernel_regularizer=reg,
-                                 activation=tf.tanh, name="h2")
+                                 activation=self.activation, name="h2")
             h3 = tf.layers.dense(h2, self._hidden_size,
-                                 kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                 kernel_initializer=self.dense_init,
                                  kernel_regularizer=reg,
-                                 activation=tf.tanh, name="h3")
+                                 activation=self.activation, name="h3")
             logits = tf.layers.dense(h3, 3,
-                                     kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                     kernel_initializer=self.dense_init,
                                      kernel_regularizer=reg,
                                      name="logits")
             preds = tf.argmax(logits, axis=1)

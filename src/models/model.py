@@ -1,12 +1,30 @@
 import tensorflow as tf
 
+def get_activation(activation):
+    if activation == "tanh":
+        return tf.tanh
+    elif activation == "relu":
+        return tf.nn.relu
+    else:
+        raise ValueError("Unsupported activation: %s." % activation)
+
+def get_initializer(init):
+    if init == "xavier":
+        return tf.contrib.layers.xavier_initializer()
+    elif init == "orth":
+        return tf.orthogonal_initializer()
+    else:
+        raise ValueError("Unsupported initializer: %s." % init)
+
 class SNLIModel(object):
     """Abstracts a Tensorflow graph for a learning task.
 
     We use various Model classes as usual abstractions to encapsulate tensorflow
     computational graphs.
     """
-    def __init__(self, learning_rate, max_seq_len, use_lens=False,
+    def __init__(self, learning_rate, max_seq_len,
+                 activation, dense_init, rec_init,
+                 use_lens=False,
                  dropout_rate=-1, use_dropout=False,
                  clip_gradients=False, max_grad_norm=-1):
         self._max_seq_len = max_seq_len
@@ -15,6 +33,10 @@ class SNLIModel(object):
         self._dropout_rate = dropout_rate
         self._clip_gradients = clip_gradients
         self._max_grad_norm = max_grad_norm
+
+        self.activation = get_activation(activation)
+        self.dense_init = get_initializer(dense_init)
+        self.rec_init = get_initializer(rec_init)
 
     def apply_dropout(self, tensor):
         """Applies dropout to a tensor"""
