@@ -55,14 +55,14 @@ class StackedAttentionModel(SNLIModel):
             with tf.variable_scope("prem_encoder"):
                 # prem_states.shape => [batch_size, max_len_seq, _hidden_size]
                 prem_hiddens, prem_final_state \
-                  = tf.nn.dynamic_rnn(cell, prem_proj, dtype=tf.float32,
+                  = tf.nn.dynamic_rnn(cell, prem, dtype=tf.float32,
                                       sequence_length=self.sentence1_lens_placeholder)
 
             with tf.variable_scope("hyp_encoder"):
                 # hyp_states.shape => [batch_size, max_len_seq, _hidden_size]
                 # Hardcoded to use an LSTMCell
                 hyp_hiddens, hyp_final_state\
-                    = tf.nn.dynamic_rnn(cell, hyp_proj, initial_state=prem_final_state,
+                    = tf.nn.dynamic_rnn(cell, hyp, initial_state=prem_final_state,
                                         sequence_length=self.sentence2_lens_placeholder)
         return prem_hiddens, prem_final_state, hyp_hiddens, hyp_final_state
 
