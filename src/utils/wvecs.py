@@ -19,12 +19,12 @@ def get_glove_vectors(glove_file, dim, vocab, dataset_dir,
         glove_saved_file += "_avg_" + str(window_size) + ".npy"
     else:
         glove_saved_file += ".npy"
-    # if os.path.isfile(glove_saved_file):
-    #     with open(glove_saved_file, "r") as glove_saved:
-    #         npzfile = np.load(glove_saved)
-    #         matrix = npzfile['matrix']
-    #         missing_indices = npzfile['missing_indices']
-    #     return matrix, missing_indices
+    if os.path.isfile(glove_saved_file):
+        with open(glove_saved_file, "r") as glove_saved:
+            npzfile = np.load(glove_saved)
+            matrix = npzfile['matrix']
+            missing_indices = npzfile['missing_indices']
+        return matrix, missing_indices
 
     matrix = np.zeros([vocab.size(), dim])
     missing_indices = set([x for x in xrange(vocab.size())])
@@ -77,6 +77,11 @@ def average_neighbors(matrix, vocab, missing_indices, window_size, dataset_dir):
             count += 1
             if count % 100 == 0:
                 print "Working on example %d" % count
+            if count % 100000 == 0:
+                dim = matrix.shape[1]
+                with open("glove" + str(count)+ "_" + str(dim), "w") as out:
+                    np.savez(out, matrix=matrix)
+
             for missing_word in missing_words:
                 if missing_word in sentence:
                     missing_sentence_index = sentence.index(missing_word)

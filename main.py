@@ -51,7 +51,7 @@ flags.DEFINE_boolean("save", True, "Whether to save the model periodically")
 FLAGS = flags.FLAGS
 
 snli_dir = os.path.join(FLAGS.data_dir, "snli_1.0")
-if FLAGS.train_unseen_vocab:
+if FLAGS.train_unseen_vocab or FLAGS.avg_unseen_vocab:
     vocab_file = os.path.join(FLAGS.data_dir, "vocab_all.txt")
     regular_data_file = os.path.join(FLAGS.data_dir, "data_all.pkl")
     debug_data_file = os.path.join(FLAGS.data_dir, "debug_data_all.pkl")
