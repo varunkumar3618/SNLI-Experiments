@@ -52,11 +52,14 @@ snli_dir = os.path.join(FLAGS.data_dir, "snli_1.0")
 vocab_file = os.path.join(FLAGS.data_dir, "vocab.txt")
 regular_data_file = os.path.join(FLAGS.data_dir, "data.pkl")
 debug_data_file = os.path.join(FLAGS.data_dir, "debug_data.pkl")
-checkpoint_dir = os.path.join(FLAGS.data_dir, "checkpoint")
-checkpoint_path = os.path.join(checkpoint_dir, "%s.ckpt" % FLAGS.name)
+base_checkpoint_dir = os.path.join(FLAGS.data_dir, "checkpoint")
+checkpoint_dir = os.path.join(base_checkpoint_dir, FLAGS.name)
+checkpoint_path = os.path.join(checkpoint_dir, "model.ckpt")
 base_log_dir = os.path.join(FLAGS.data_dir, "log")
 log_dir = os.path.join(base_log_dir, FLAGS.name)
 
+if not os.path.isdir(base_checkpoint_dir):
+    os.mkdir(base_checkpoint_dir)
 if not os.path.isdir(checkpoint_dir):
     os.mkdir(checkpoint_dir)
 if not os.path.isdir(base_log_dir):
