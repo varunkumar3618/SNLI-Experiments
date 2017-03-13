@@ -94,5 +94,5 @@ def average_neighbors(matrix, vocab, missing_indices, window_size, dataset_dir):
         if neighbors_count[missing_word] > 0:
             index = vocab.id_for_token(missing_word)
             matrix[index] /= neighbors_count[missing_word]    
-
-    return word_vec_matrix
+    
+    return matrix
