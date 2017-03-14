@@ -148,38 +148,6 @@ class FeedbackModel(SNLIModel):
             updated = e * old + (1 - e) * new
         return updated
 
-    def local_gating(self, old, new, scope):
-        with tf.variable_scope(scope):
-            old_proj = tf.layers.dense(old, self._hidden_size,
-                                       kernel_initializer=self.dense_init,
-                                       kernel_regularizer=reg,
-                                       use_bias=False,
-                                       name="old_proj")
-            e = tf.einsum("aij,aij->ai", old_proj, new)
-            e = tf.expand_dims(e, axis=1)
-            updated = e * old + (1 - e) * new
-        return updated
-
-
-
-    def gating(self, old, new, scope, three_dim=False):
-        reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
-        with tf.variable_scope(scope):
-            old_proj = tf.layers.dense(old, self._hidden_size,
-                                       kernel_initializer=self.dense_init,
-                                       kernel_regularizer=reg,
-                                       use_bias=False,
-                                       name="old_proj")
-            e = tf.einsum("aij,aik->")
-            e = tf.sigmoid(tf.tensordot(old_proj, new, axes=1))
-
-            if three_dim:
-                e = tf.expand_dims(e, axis=2)
-            else:
-                e = tf.expand_dims(e, axis=1)
-
-            return 
-
     def add_prediction_op(self):
         with tf.variable_scope("prediction"):
             prem_embed, hyp_embed = self.embedding()
