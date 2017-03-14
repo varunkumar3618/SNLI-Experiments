@@ -136,7 +136,6 @@ class FeedbackModel(SNLIModel):
                     memory = memory_cell(episode, memory)
 
                     if i == 0:
-                        memory = episode
                         tf.get_variable_scope().reuse_variables()
 
             preds, logits = self.classification(memory)
