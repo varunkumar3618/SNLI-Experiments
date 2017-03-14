@@ -210,11 +210,12 @@ class SNLIModel(object):
         Returns:
             acc: accuracy over the batch (a scalar)
             loss: loss over the batch (a scalar)
+            predictions: np.ndarray of shape (n_samples,)
         """
         feed = self.create_feed_dict(sentence1_batch, sentence1_lens_batch,
                                      sentence2_batch, sentence2_lens_batch,
                                      labels_batch, is_training=False)
-        return sess.run([self.acc_op, self.loss], feed_dict=feed)
+        return sess.run([self.acc_op, self.loss, self.pred], feed_dict=feed)
 
     def predict_on_batch(self, sess,
                          sentence1_batch, sentence1_lens_batch,
@@ -228,7 +229,7 @@ class SNLIModel(object):
             sentence2_batch: np.ndarray of shape (n_samples, max_len)
             sentence2_lens_batch: np.ndarray of shape (n_samples)
         Returns:
-            predictions: np.ndarray of shape (n_samples, n_classes)
+            predictions: np.ndarray of shape (n_samples,)
         """
         feed = self.create_feed_dict(sentence1_batch, sentence1_lens_batch,
                                      sentence2_batch, sentence2_lens_batch,

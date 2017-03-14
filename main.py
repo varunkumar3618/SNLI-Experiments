@@ -18,7 +18,7 @@ flags.DEFINE_string("model", "SOW", "The type of model to train.")
 
 # File paths
 flags.DEFINE_string("data_dir", "data/", "The location of the data files.")
-flags.DEFINE_string("checkpoint_subdir", "model/", "The checkpoint subdirectory inside data_dir")
+flags.DEFINE_string("name", "model", "The name of the model, used to save logs and checkpoints.")
 flags.DEFINE_string("glove_type", "common", "The source of the Glove word vectors used: one of 'wiki' and 'common'")
 
 # Data
@@ -49,8 +49,8 @@ flags.DEFINE_float("l2_reg", 1e-4, "The level of l2 regularization to use.")
 flags.DEFINE_float("learning_rate", 1e-3, "The learning rate.")
 
 flags.DEFINE_boolean("debug", False, "Whether to run in debug mode, i.e. use a smaller dataset and increase verbosity.")
-flags.DEFINE_boolean("train", True, "Whether to train or test the model.")
-flags.DEFINE_boolean("save", True, "Whether to save the model periodically")
+flags.DEFINE_string("mode", "train", "Whether to run the model in 'train,' 'dev,', 'test' or 'all' mode.")
+flags.DEFINE_boolean("save", True, "Whether to save the model.")
 
 FLAGS = flags.FLAGS
 
@@ -67,7 +67,23 @@ else:
 if FLAGS.word_embed_dim != 300:
     FLAGS.glove_type = "wiki"
 
-checkpoint_dir = os.path.join(FLAGS.data_dir, FLAGS.checkpoint_subdir)
+# vocab_file = os.path.join(FLAGS.data_dir, "vocab.txt")
+# regular_data_file = os.path.join(FLAGS.data_dir, "data.pkl")
+# debug_data_file = os.path.join(FLAGS.data_dir, "debug_data.pkl")
+base_models_dir = os.path.join(FLAGS.data_dir, "models")
+model_dir = os.path.join(base_models_dir, FLAGS.name)
+checkpoint_dir = os.path.join(model_dir, "checkpoint")
+checkpoint_path = os.path.join(checkpoint_dir, "model.ckpt")
+results_dir = os.path.join(model_dir, "results")
+
+if not os.path.isdir(base_models_dir):
+    os.mkdir(base_models_dir)
+if not os.path.isdir(model_dir):
+    os.mkdir(model_dir)
+if not os.path.isdir(checkpoint_dir):
+    os.mkdir(checkpoint_dir)
+if not os.path.isdir(results_dir):
+    os.mkdir(results_dir)
 
 if FLAGS.glove_type == "wiki":
     glove_file = os.path.join(os.path.join(FLAGS.data_dir, "glove.6B"), "glove.6B.%sd.txt" % FLAGS.word_embed_dim)
@@ -77,35 +93,6 @@ elif FLAGS.glove_type == "common":
     glove_file = os.path.join(os.path.join(FLAGS.data_dir, "glove.840B.300d"), "glove.840B.300d.txt")
 else:
     raise ValueError("Unrecognized word vector type: %s." % FLAGS.glove_type)
-
-
-def run_train_epoch(sess, model, dataset, epoch_num):
-    print "="*79
-    print "Epoch: %s" % (epoch_num + 1)
-    prog = Progbar(target=dataset.split_num_batches("train", FLAGS.batch_size))
-    for i, batch in enumerate(dataset.get_shuffled_iterator("train", FLAGS.batch_size)):
-        loss = model.train_on_batch(sess, *batch)
-        prog.update(i + 1, [("train loss", loss)])
-    print "="*79
-
-def run_eval_epoch(sess, model, dataset, split):
-    batch_sizes = []
-    accuracies = []
-
-    print "-"*79
-    print "Evaluating on %s." % split
-    prog = Progbar(target=dataset.split_num_batches(split, FLAGS.batch_size))
-    for i, batch in enumerate(dataset.get_iterator(split, FLAGS.batch_size)):
-        acc, loss = model.evaluate_on_batch(sess, *batch)
-        prog.update(i + 1, [("%s loss" % split, loss)])
-
-        batch_sizes.append(batch[0].shape[0])
-        accuracies.append(acc)
-
-    accuracy = np.average(accuracies, weights=batch_sizes)
-    print "Accuracy: %s" % accuracy
-    print "-"*79
-    return accuracy
 
 def get_model(vocab):
     print "Embedding matrix"
@@ -147,11 +134,64 @@ def get_model(vocab):
     else:
         raise ValueError("Unrecognized model: %s." % FLAGS.model)
 
+def run_train_epoch(sess, model, dataset, epoch_num):
+    print "="*79
+    print "Epoch: %s" % (epoch_num + 1)
+    prog = Progbar(target=dataset.split_num_batches("train", FLAGS.batch_size))
+    for i, batch in enumerate(dataset.get_shuffled_iterator("train", FLAGS.batch_size)):
+        loss = model.train_on_batch(sess, *batch)
+        prog.update(i + 1, [("train loss", loss)])
+    print "="*79
+
+def run_eval_epoch(sess, model, dataset, split):
+    batch_sizes = []
+    accuracies = []
+    preds = []
+
+    print "-"*79
+    print "Evaluating on %s." % split
+    prog = Progbar(target=dataset.split_num_batches(split, FLAGS.batch_size))
+    for i, batch in enumerate(dataset.get_iterator(split, FLAGS.batch_size)):
+        acc, loss, pred = model.evaluate_on_batch(sess, *batch)
+        prog.update(i + 1, [("%s loss" % split, loss)])
+
+        batch_sizes.append(batch[0].shape[0])
+        accuracies.append(acc)
+        preds.append(pred)
+
+    accuracy = np.average(accuracies, weights=batch_sizes)
+    print "Accuracy: %s" % accuracy
+    print "-"*79
+    return accuracy, np.concatenate(preds)
+
+def train(model, dataset):
+    if FLAGS.save:
+        saver = tf.train.Saver(max_to_keep=1)
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        sess.run(tf.local_variables_initializer())
+        best_accuracy = 0
+        for epoch in range(FLAGS.num_epochs):
+            run_train_epoch(sess, model, dataset, epoch)
+            dev_accuracy, _ = run_eval_epoch(sess, model, dataset, "train" if FLAGS.debug else "dev")
+            if dev_accuracy > best_accuracy and FLAGS.save:
+                saver.save(sess, checkpoint_path)
+                best_accuracy = dev_accuracy
+
+def test(model, dataset, split):
+    saver = tf.train.Saver()
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        sess.run(tf.local_variables_initializer())
+        saver.restore(sess, checkpoint_path)
+        _, preds = run_eval_epoch(sess, model, dataset, split)
+
+        save_path = os.path.join(results_dir, "predictions_%s.txt" % split)
+        np.savetxt(save_path, preds)
+        np_save_path = os.path.join(results_dir, "predictions_%s.npy" % split)
+        np.save(np_save_path, preds)
 
 def main(_):
-    if not os.path.exists('./data/model/'):
-        os.makedirs('./data/model/')
-
     with tf.Graph().as_default():
         print "Vocab"
         if FLAGS.train_unseen_vocab or FLAGS.avg_unseen_vocab:
@@ -167,25 +207,14 @@ def main(_):
         model = get_model(vocab)
         model.build()
 
-        saver = None
-        if FLAGS.save:
-            saver = tf.train.Saver()
-
-        with tf.Session() as sess:
-            sess.run(tf.global_variables_initializer())
-            sess.run(tf.local_variables_initializer())
-
-            if FLAGS.train:
-                best_accuracy = 0
-                for epoch in range(FLAGS.num_epochs):
-                    run_train_epoch(sess, model, dataset, epoch)
-                    accuracy = run_eval_epoch(sess, model, dataset, "train" if FLAGS.debug else "dev")
-
-                    if accuracy > best_accuracy and FLAGS.save:
-                        saver.save(sess, checkpoint_dir + 'best_model_' + FLAGS.model,
-                           global_step=epoch+1)
-            else:
-                raise ValueError("Cannot test the model just yet.")
+        if FLAGS.mode == "train":
+            train(model, dataset)
+        elif FLAGS.mode == "dev":
+            test(model, dataset, "dev")
+        elif FLAGS.mode == "test":
+            test(model, dataset, "test")
+        else:
+            raise ValueError("Unrecognized mode: %s." % FLAGS.mode)
 
 if __name__ == "__main__":
     tf.app.run()
