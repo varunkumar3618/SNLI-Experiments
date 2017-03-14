@@ -28,5 +28,5 @@ def get_embeddings(embedding_matrix, embedding_mode, missing_indices):
 
 def embed_indices(indices, embeddings):
     embedded_vectors = tf.nn.embedding_lookup(embeddings, indices)
-    output_shape = [tf.shape(indices)[0], tf.shape(indices)[1], embeddings.shape[1]]
+    output_shape = [tf.shape(indices)[0], tf.shape(indices)[1], tf.shape(embeddings)[1]]
     return tf.reshape(embedded_vectors, shape=output_shape)
