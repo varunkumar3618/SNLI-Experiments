@@ -87,6 +87,7 @@ class StackedAttentionModel(SNLIModel):
         return tf.concat([prem, beta], axis=2), tf.concat([hyp, alpha], axis=2)
 
     def add_skip(self, prem_orig, hyp_orig, prem_repr, hyp_repr, scope):
+        reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         with tf.variable_scope(scope):
             G_prem_in = tf.concat([prem_orig, prem_repr], axis=2)
             G_prem = tf.layers.dense(G_prem_in, self._hidden_size,
