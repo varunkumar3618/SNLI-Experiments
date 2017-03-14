@@ -88,7 +88,7 @@ class StackedAttentionModel(SNLIModel):
 
     def full_layer(self, prem, hyp, scope):
         with tf.variable_scope(scope):
-            prem_hiddens, _, hyp_hiddens, _ = self.encoding(prem_proj, hyp_proj, "encoding")
+            prem_hiddens, _, hyp_hiddens, _ = self.encoding(prem, hyp, "encoding")
             prem_att, hyp_att = self.all_attention(prem_hiddens, hyp_hiddens, "attention")
             prem_proj, hyp_proj = self.projection(prem_att, hyp_att, "projection")
         return prem_proj, hyp_proj
