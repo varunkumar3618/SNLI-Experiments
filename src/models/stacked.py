@@ -69,7 +69,7 @@ class StackedAttentionModel(SNLIModel):
             x_att, y_att = self.projection(x, y, "projection_att")
             x_subj, y_subj = self.projection(x, y, "projection_subj")
 
-            E = tf.exp(tf.einsum("aij,ajk->aik", x_tt, tf.transpose(y_att, perm=[0, 2, 1])))
+            E = tf.exp(tf.einsum("aij,ajk->aik", x_att, tf.transpose(y_att, perm=[0, 2, 1])))
 
             Num_beta = tf.einsum("aij,ajk->aik", E, y_subj)
             Den_beta = tf.reduce_sum(E, axis=2)
