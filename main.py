@@ -43,7 +43,7 @@ flags.DEFINE_float("l2_reg", 1e-4, "The level of l2 regularization to use.")
 flags.DEFINE_float("learning_rate", 1e-3, "The learning rate.")
 
 flags.DEFINE_boolean("debug", False, "Whether to run in debug mode, i.e. use a smaller dataset and increase verbosity.")
-flags.DEFINE_string("mode", "train", "Whether to run the model in 'train,' 'dev,' or 'test' mode.")
+flags.DEFINE_string("mode", "train", "Whether to run the model in 'train,' 'dev,', 'test' or 'all' mode.")
 flags.DEFINE_boolean("save", True, "Whether to save the model.")
 
 FLAGS = flags.FLAGS
@@ -118,21 +118,23 @@ def run_train_epoch(sess, model, dataset, epoch_num):
 def run_eval_epoch(sess, model, dataset, split):
     batch_sizes = []
     accuracies = []
+    preds = []
 
     print "-"*79
     print "Evaluating on %s." % split
     prog = Progbar(target=dataset.split_num_batches(split, FLAGS.batch_size))
     for i, batch in enumerate(dataset.get_iterator(split, FLAGS.batch_size)):
-        acc, loss = model.evaluate_on_batch(sess, *batch)
+        acc, loss, pred = model.evaluate_on_batch(sess, *batch)
         prog.update(i + 1, [("%s loss" % split, loss)])
 
         batch_sizes.append(batch[0].shape[0])
         accuracies.append(acc)
+        preds.append(pred)
 
     accuracy = np.average(accuracies, weights=batch_sizes)
     print "Accuracy: %s" % accuracy
     print "-"*79
-    return accuracy
+    return accuracy, np.concatenate(preds)
 
 def train(model, dataset):
     if FLAGS.save:
@@ -143,7 +145,7 @@ def train(model, dataset):
         best_accuracy = 0
         for epoch in range(FLAGS.num_epochs):
             run_train_epoch(sess, model, dataset, epoch)
-            dev_accuracy = run_eval_epoch(sess, model, dataset, "train" if FLAGS.debug else "dev")
+            dev_accuracy, _ = run_eval_epoch(sess, model, dataset, "train" if FLAGS.debug else "dev")
             if dev_accuracy > best_accuracy and FLAGS.save:
                 saver.save(sess, checkpoint_path)
                 best_accuracy = dev_accuracy
@@ -154,12 +156,14 @@ def test(model, dataset, split):
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         saver.restore(sess, checkpoint_path)
-        accuracy = run_eval_epoch(sess, model, dataset, split)
+        _, preds = run_eval_epoch(sess, model, dataset, split)
+
+        save_path = os.path.join(results_dir, "predictions_%s.txt" % split)
+        np.savetxt(save_path, preds)
+        np_save_path = os.path.join(results_dir, "predictions_%s.npy" % split)
+        np.save(np_save_path, preds)
 
 def main(_):
-    if not os.path.exists('./data/model/'):
-        os.makedirs('./data/model/')
-
     with tf.Graph().as_default():
         vocab = Vocab(snli_dir, vocab_file, FLAGS.max_vocab_size)
         dataset = Dataset(snli_dir, regular_data_file, debug_data_file, vocab,
