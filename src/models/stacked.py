@@ -6,7 +6,7 @@ from src.utils.ops import get_embedding
 class StackedAttentionModel(SNLIModel):
     def __init__(self, embedding_matrix, update_embeddings,
                  hidden_size, use_peepholes,
-                 l2_reg,
+                 l2_reg, num_att_layers=2,
                  use_lens=True, use_dropout=True,
                  *args, **kwargs):
         super(StackedAttentionModel, self).__init__(use_lens=use_lens, use_dropout=use_dropout,
@@ -16,6 +16,7 @@ class StackedAttentionModel(SNLIModel):
         self._hidden_size = hidden_size
         self._use_peepholes = use_peepholes
         self._l2_reg = l2_reg
+        self._num_att_layers = num_att_layers
 
     def embedding(self):
         with tf.variable_scope("embedding"):
@@ -26,9 +27,6 @@ class StackedAttentionModel(SNLIModel):
             hyp_embed = get_embedding(self.sentence2_placeholder, self._embedding_matrix,
                                       self._update_embeddings, reuse=True)
         return prem_embed, hyp_embed
-
-    def dropout(self, prem, hyp):
-        return self.apply_dropout(prem), self.apply_dropout(hyp)
 
     def projection(self, prem, hyp, scope):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
@@ -42,7 +40,7 @@ class StackedAttentionModel(SNLIModel):
                                        kernel_initializer=self.dense_init,
                                        kernel_regularizer=reg,
                                        activation=self.activation, name="hyp_proj")
-        return prem_proj, hyp_proj
+        return self.apply_dropout(prem_proj), self.apply_dropout(hyp_proj)
 
     def encoding(self, prem, hyp, scope):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
@@ -68,13 +66,16 @@ class StackedAttentionModel(SNLIModel):
 
     def attention(self, x, y, scope):
         with tf.variable_scope(scope):
-            E = tf.exp(tf.einsum("aij,ajk->aik", x, tf.transpose(y, perm=[0, 2, 1])))
+            x_att, y_att = self.projection(x, y, "projection_att")
+            x_subj, y_subj = self.projection(x, y, "projection_subj")
 
-            Num_beta = tf.einsum("aij,ajk->aik", E, y)
+            E = tf.exp(tf.einsum("aij,ajk->aik", x_tt, tf.transpose(y_att, perm=[0, 2, 1])))
+
+            Num_beta = tf.einsum("aij,ajk->aik", E, y_subj)
             Den_beta = tf.reduce_sum(E, axis=2)
             beta = Num_beta / tf.expand_dims(Den_beta, axis=2)
 
-            Num_alpha = tf.einsum("aij,aik->ajk", E, x)
+            Num_alpha = tf.einsum("aij,aik->ajk", E, x_subj)
             Den_alpha = tf.reduce_sum(E, axis=1)
             alpha = Num_alpha / tf.expand_dims(Den_alpha, axis=2)
         return beta, alpha
@@ -84,6 +85,13 @@ class StackedAttentionModel(SNLIModel):
         with tf.variable_scope(scope):
             beta, alpha = self.attention(prem, hyp, "inter")
         return tf.concat([prem, beta], axis=2), tf.concat([hyp, alpha], axis=2)
+
+    def full_layer(self, prem, hyp, scope):
+        with tf.variable_scope(scope):
+            prem_hiddens, _, hyp_hiddens, _ = self.encoding(prem_proj, hyp_proj, "encoding")
+            prem_att, hyp_att = self.all_attention(prem_hiddens, hyp_hiddens, "attention")
+            prem_proj, hyp_proj = self.projection(prem_att, hyp_att, "projection")
+        return prem_proj, hyp_proj
 
     def classification(self, h_star):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
@@ -98,14 +106,13 @@ class StackedAttentionModel(SNLIModel):
     def add_prediction_op(self):
         with tf.variable_scope("prediction"):
             prem_embed, hyp_embed = self.embedding()
-            prem_proj, hyp_proj = self.projection(prem_embed, hyp_embed, "projection1")
-            prem_proj, hyp_proj = self.dropout(prem_proj, hyp_proj)
-            prem_hiddens, _, hyp_hiddens, _ = self.encoding(prem_proj, hyp_proj, "encoding1")
-            prem_att, hyp_att = self.all_attention(prem_hiddens, hyp_hiddens, "attention1")
+            prem_proj, hyp_proj = self.projection(prem_embed, hyp_embed, "input_projection")
 
-            prem_proj, hyp_proj = self.projection(prem_att, hyp_att, "projection2")
-            prem_proj, hyp_proj = self.dropout(prem_proj, hyp_proj)
-            _, prem_final_state, _, hyp_final_state = self.encoding(prem_att, hyp_att, "encoding2")
+            for i in range(self._num_att_layers):
+                prem_proj, hyp_proj = self.full_layer(prem_proj, hyp_proj, "full%s" % (i + 1))
+
+            _, prem_final_state, _, hyp_final_state\
+                = self.encoding(prem_proj, hyp_proj, "output_encoding")
             prem_final_hidden, hyp_final_hidden = prem_final_state[1], hyp_final_state[1]
 
             h_star = tf.concat([prem_final_hidden, hyp_final_hidden], axis=1)
