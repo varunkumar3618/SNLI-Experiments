@@ -137,6 +137,7 @@ class FeedbackModel(SNLIModel):
         return global_episode, prem_composed, hyp_composed
 
     def gating(self, old, new, scope, three_dim=False):
+        reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         with tf.variable_scope(scope):
             old_proj = tf.layers.dense(old, self._hidden_size,
                                        kernel_initializer=self.dense_init,
