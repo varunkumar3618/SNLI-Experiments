@@ -26,12 +26,12 @@ class FeedbackModel(SNLIModel):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         with tf.variable_scope(scope):
             fw_cell = tf.contrib.rnn.LSTMCell(
-                self._hidden_size,
+                self._hidden_size / 2,
                 use_peepholes=self._use_peepholes,
                 initializer=self.rec_init
             )
             bw_cell = tf.contrib.rnn.LSTMCell(
-                self._hidden_size,
+                self._hidden_size / 2,
                 use_peepholes=self._use_peepholes,
                 initializer=self.rec_init
             )
