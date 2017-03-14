@@ -7,8 +7,8 @@ class Chen(SNLIModel):
                  hidden_size, use_peepholes,
                  l2_reg, use_lens=True, use_dropout=True,
                  *args, **kwargs):
-        super(StackedAttentionModel, self).__init__(use_lens=use_lens, use_dropout=use_dropout,
-                                                    *args, **kwargs)
+        super(Chen, self).__init__(use_lens=use_lens, use_dropout=use_dropout,
+                                   *args, **kwargs)
         self._hidden_size = hidden_size
         self._use_peepholes = use_peepholes
         self._l2_reg = l2_reg
