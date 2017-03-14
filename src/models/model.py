@@ -24,6 +24,7 @@ class SNLIModel(object):
     """
     def __init__(self, learning_rate, max_seq_len,
                  activation, dense_init, rec_init,
+                 train_unseen_vocab, missing_indices,
                  use_lens=False,
                  dropout_rate=-1, use_dropout=False,
                  clip_gradients=False, max_grad_norm=-1):
@@ -37,6 +38,9 @@ class SNLIModel(object):
         self.activation = get_activation(activation)
         self.dense_init = get_initializer(dense_init)
         self.rec_init = get_initializer(rec_init)
+        self._train_unseen_vocab = train_unseen_vocab
+        self._missing_indices = missing_indices
+
 
     def apply_dropout(self, tensor):
         """Applies dropout to a tensor"""

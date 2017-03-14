@@ -26,9 +26,9 @@ flags.DEFINE_integer("max_vocab_size", 10000, "The maximum size of the vocabular
 flags.DEFINE_integer("max_seq_len", 100, "The maximum length of a sentence. Sentences longer than this will be truncated.")
 
 # Word vector embeddings
-flags.DEFINE_boolean("train_unseen_vocab", False, "Whether to train word vectors for words not in GloVe")
+flags.DEFINE_boolean("train_unseen_vocab", True, "Whether to train word vectors for words not in GloVe")
 flags.DEFINE_boolean("update_embeddings", False, "Whether the word vectors should be updated")
-flags.DEFINE_boolean("avg_unseen_vocab", True, "Whether to make the embedding of unseen words the average of neighbors")
+flags.DEFINE_boolean("avg_unseen_vocab", False, "Whether to make the embedding of unseen words the average of neighbors")
 flags.DEFINE_integer("window_size", 4, "Size of window to average over if avg avg_unseen_vocab is True")
 
 # Model
@@ -109,8 +109,10 @@ def run_eval_epoch(sess, model, dataset, split):
 
 def get_model(vocab):
     print "Embedding matrix"
+    snli_dir = os.path.join(FLAGS.data_dir, "snli_1.0")
     embedding_matrix, missing_indices\
-            = get_glove_vectors(glove_file, FLAGS.word_embed_dim, vocab)
+            = get_glove_vectors(glove_file, FLAGS.word_embed_dim, vocab, 
+                snli_dir, FLAGS.avg_unseen_vocab, FLAGS.window_size)
     
     kwargs = {
         "embedding_matrix": embedding_matrix,
@@ -124,7 +126,9 @@ def get_model(vocab):
         "max_grad_norm": FLAGS.max_grad_norm,
         "activation": FLAGS.activation,
         "dense_init": FLAGS.dense_init,
-        "rec_init": FLAGS.rec_init
+        "rec_init": FLAGS.rec_init, 
+        "train_unseen_vocab": FLAGS.train_unseen_vocab, 
+        "missing_indices": missing_indices
     }
     if FLAGS.model == "SOW":
         return SumOfWords(**kwargs)
@@ -137,6 +141,9 @@ def get_model(vocab):
     elif FLAGS.model == "WBW":
         kwargs["use_peepholes"] = FLAGS.use_peepholes
         return WBWModel(**kwargs)
+    elif FLAGS.model == "mLSTM":
+        kwargs["use_peepholes"] = FLAGS.use_peepholes
+        return mLSTMModel(**kwargs)
     else:
         raise ValueError("Unrecognized model: %s." % FLAGS.model)
 

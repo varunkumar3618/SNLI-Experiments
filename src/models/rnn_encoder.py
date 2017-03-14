@@ -10,9 +10,7 @@ class RNNEncoder(SumOfWords):
                  *args, **kwargs):
         super(RNNEncoder, self).__init__(use_lens=use_lens, *args, **kwargs)
         self._use_peepholes = use_peepholes
-        self._train_unseen_vocab = train_unseen_vocab
-        self._missing_indices = missing_indices
-
+        
     def encoding(self, prem_proj, hyp_proj):
         with tf.variable_scope("encoding"):
             cell = tf.contrib.rnn.LSTMCell(

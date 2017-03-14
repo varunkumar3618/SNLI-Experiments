@@ -15,6 +15,15 @@ class mLSTMCell(tf.contrib.rnn.RNNCell):
         self._initializer = initializer
         self._regularizer = regularizer
 
+        # A hack to make regularization work
+        with tf.variable_scope(type(self).__name__) as scope:
+            self._scope = scope
+            _ = self(
+                tf.zeros_like(subject),
+                tf.zeros(shape=[tf.shape(subject)[0], self._hidden_size], dtype=subject.dtype)
+            )
+            self._scope.reuse_variables()
+            
     @property
     def state_size(self):
         return self._state_size

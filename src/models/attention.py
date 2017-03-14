@@ -6,7 +6,7 @@ from src.utils.ops import get_embedding, matmul_3d_1d, matmul_3d_2d
 class AttentionModel(SNLIModel):
     def __init__(self, embedding_matrix, update_embeddings,
                  hidden_size, use_peepholes,
-                 l2_reg, train_unseen_vocab, missing_indices,
+                 l2_reg,
                  use_lens=True, use_dropout=True,
                  *args, **kwargs):
         super(AttentionModel, self).__init__(use_lens=use_lens, use_dropout=use_dropout,
@@ -16,9 +16,7 @@ class AttentionModel(SNLIModel):
         self._hidden_size = hidden_size
         self._use_peepholes = use_peepholes
         self._l2_reg = l2_reg
-        self._train_unseen_vocab = train_unseen_vocab
-        self._missing_indices = missing_indices
-
+        
     def embedding(self):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         with tf.variable_scope("embedding"):
