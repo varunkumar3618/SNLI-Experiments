@@ -33,8 +33,7 @@ class FeedbackModel(SNLIModel):
 
     def make_gru_cell(self, size):
         cell = tf.contrib.rnn.GRUCell(
-            self._hidden_size,
-            initializer=self.rec_init
+            self._hidden_size
         )
         cell = self.apply_dropout_wrapper(cell)
         return cell
