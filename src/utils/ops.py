@@ -23,8 +23,6 @@ def get_embeddings(embedding_matrix, embedding_mode, missing_indices):
         missing_one_hot = np.zeros(len(embedding_matrix))
         missing_one_hot[missing_indices] = 1
         missing = tf.expand_dims(tf.constant(missing_one_hot, dtype=tf.float32), axis=1)
-        print tf.constant(missing_one_hot).shape, missing.shape
-        raise ValueError
 
         return original_embeddings * (1 - missing) + new_embeddings * missing
 
