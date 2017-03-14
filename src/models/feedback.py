@@ -59,7 +59,7 @@ class FeedbackModel(SNLIModel):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         fw_cell = self.make_gru_cell(self._hidden_size)
         bw_cell = self.make_gru_cell(self._hidden_size)
-        return run_birnns(fw_cell, bw_cell, prem, hyp, scope)
+        return self.run_birnns(fw_cell, bw_cell, prem, hyp, scope)
 
     def classification(self, h_star):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
