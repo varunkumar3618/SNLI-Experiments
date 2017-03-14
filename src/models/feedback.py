@@ -93,16 +93,22 @@ class FeedbackModel(SNLIModel):
             alpha = Num_alpha / tf.expand_dims(Den_alpha, axis=2)
         return beta, alpha
 
-    def collection(self, prem_hiddens, prem_tilda, hyp_hiddens, hyp_tilda, memory):
-        def make_collection(x, x_tilda):
+    def collection(self, prem_hiddens, prem_tilda, hyp_hiddens, hyp_tilda,
+                   global_memory, local_prem_memory, local_hyp_memory):
+        def make_collection(x, x_tilda, global_memory, x_memory):
             tensors = [
                 x,
                 x_tilda,
                 x - x_tilda,
-                x * x_tilda
+                x * x_tilda,
+                x - tf.expand_dims(global_memory, axis=1),
+                x * tf.expand_dims(global_memory, axis=1),
+                x - x_memory,
+                x * x_memory
             ]
             return tf.concat(tensors, axis=2)
-        return make_collection(prem_hiddens, prem_tilda), make_collection(hyp_hiddens, hyp_tilda)
+        return make_collection(prem_hiddens, prem_tilda, global_memory, local_prem_memory),\
+            make_collection(hyp_hiddens, hyp_tilda, global_memory, local_hyp_memory)
 
     def pooling(self, prem_composed, hyp_composed):
         prem_avg_pool = tf.reduce_mean(prem_composed, axis=1)
@@ -112,28 +118,60 @@ class FeedbackModel(SNLIModel):
 
         return prem_avg_pool, prem_max_pool, hyp_avg_pool, hyp_max_pool
 
-    def episode(self, prem_hiddens, hyp_hiddens, memory, scope):
+    def episode(self, prem_hiddens, hyp_hiddens, global_memory, local_prem_memory, local_hyp_memory, scope):
         with tf.variable_scope(scope):
             prem_tilda, hyp_tilda = self.attention(prem_hiddens, hyp_hiddens, scope)
-            prem_m, hyp_m = self.collection(prem_hiddens, prem_tilda, hyp_hiddens, hyp_tilda, memory)
+            prem_m, hyp_m = self.collection(prem_hiddens, prem_tilda, hyp_hiddens, hyp_tilda,
+                                            global_memory, local_prem_memory, local_hyp_memory)
             prem_composed, hyp_composed = self.projection(prem_m, hyp_m, "composition")
+
             prem_avg_pool, prem_max_pool, hyp_avg_pool, hyp_max_pool\
                 = self.pooling(prem_composed, hyp_composed)
-            h_star = tf.concat([prem_avg_pool, prem_max_pool, hyp_avg_pool, hyp_max_pool], axis=1)
-        return h_star
+            global_features = tf.concat([prem_avg_pool, prem_max_pool, hyp_avg_pool, hyp_max_pool], axis=1)
+            global_episode = tf.layers.dense(global_features, self._hidden_size,
+                                             kernel_initializer=self.dense_init,
+                                             kernel_regularizer=reg,
+                                             activation=self.activation,
+                                             name="global")
+        return global_episode, prem_composed, hyp_composed
+
+    def gating(self, old, new, scope, three_dim=False):
+        with tf.variable_scope(scope):
+            old_proj = tf.layers.dense(old, self._hidden_size,
+                                       kernel_initializer=self.dense_init,
+                                       kernel_regularizer=reg,
+                                       use_bias=False,
+                                       name="old_proj")
+            e = tf.tanh(tf.tensordot(old_proj, new, axes=1))
+
+            if three_dim:
+                e = tf.expand_dims(e, axis=2)
+            else:
+                e = tf.expand_dims(e, axis=1)
+
+            return e * old + (1 - e) * new
 
     def add_prediction_op(self):
         with tf.variable_scope("prediction"):
             prem_embed, hyp_embed = self.embedding()
             prem_hiddens, _, hyp_hiddens, _ = self.encoding(prem_embed, hyp_embed, "encoding")
 
-            memory = tf.zeros([tf.shape(prem_hiddens)[0], self._hidden_size])
-            memory_cell = tf.contrib.rnn.GRUCell(self._hidden_size)
+            global_memory = tf.zeros([tf.shape(prem_hiddens)[0], self._hidden_size])
+            local_prem_memory = tf.zeros([tf.shape(prem_hiddens)[0], tf.shape(prem_hiddens)[1], self._hidden_size])
+            local_hyp_memory = tf.zeros([tf.shape(hyp_hiddens)[0], tf.shape(hyp_hiddens)[1], self._hidden_size])
 
             with tf.variable_scope("feedback"):
                 for i in range(self._feedback_iters):
-                    episode = self.episode(prem_hiddens, hyp_hiddens, memory, "attention")
-                    memory, _ = memory_cell(episode, memory)
+                    global_episode, local_prem_episode, local_hyp_episode\
+                        = self.episode(
+                            prem_hiddens, hyp_hiddens,
+                            global_memory,
+                            local_prem_memory, local_hyp_memory,
+                            "episode"
+                        )
+                    global_memory = self.gating(global_memory, global_episode, "global_gating")
+                    local_prem_memory = self.gating(local_prem_memory, local_prem_episode, "prem_gating")
+                    local_hyp_memory = self.gating(local_hyp_memory, local_hyp_episode, "hyp_gating")
 
                     if i == 0:
                         tf.get_variable_scope().reuse_variables()
