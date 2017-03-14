@@ -52,24 +52,21 @@ class StackedAttentionModel(SNLIModel):
                 initializer=self.rec_init
             )
             with tf.variable_scope("prem_encoder"):
-                # prem_states.shape => [batch_size, max_len_seq, _hidden_size]
-                prem_hiddens, prem_final_state \
-                  = tf.nn.dynamic_rnn(cell, prem, dtype=tf.float32,
-                                      sequence_length=self.sentence1_lens_placeholder)
+                (prem_fw_hiddens, prem_bw_hiddens), prem_final_state\
+                    = tf.nn.bidirectional_dynamic_rnn(cell, cell, prem, dtype=tf.float32,
+                                                      sequence_length=self.sentence1_lens_placeholder)
+                prem_hiddens = tf.concat([prem_fw_hiddens, prem_bw_hiddens], axis=2)
 
             with tf.variable_scope("hyp_encoder"):
-                # hyp_states.shape => [batch_size, max_len_seq, _hidden_size]
-                # Hardcoded to use an LSTMCell
-                hyp_hiddens, hyp_final_state\
-                    = tf.nn.dynamic_rnn(cell, hyp, initial_state=prem_final_state,
-                                        sequence_length=self.sentence2_lens_placeholder)
+                (hyp_fw_hiddens, hyp_bw_hiddens), hyp_final_state \
+                  = tf.nn.bidirectional_dynamic_rnn(cell, cell, prem, dtype=tf.float32,
+                                      sequence_length=self.sentence1_lens_placeholder)
+                hyp_hiddens = tf.concat([hyp_fw_hiddens, hyp_bw_hiddens], axis=2)
         return prem_hiddens, prem_final_state, hyp_hiddens, hyp_final_state
 
     def attention(self, x, y, scope):
         with tf.variable_scope(scope):
-            x_att, y_att = self.projection(x, y, "projection_att")
-
-            E = tf.exp(tf.einsum("aij,ajk->aik", x_att, tf.transpose(y_att, perm=[0, 2, 1])))
+            E = tf.exp(tf.einsum("aij,ajk->aik", x, tf.transpose(y, perm=[0, 2, 1])))
 
             Num_beta = tf.einsum("aij,ajk->aik", E, y)
             Den_beta = tf.reduce_sum(E, axis=2)
@@ -104,6 +101,25 @@ class StackedAttentionModel(SNLIModel):
             hyp = G_hyp * hyp_orig + (1 - G_hyp) * hyp_repr
         return prem, hyp
 
+    def collection(self, prem_hiddens, prem_tilda, hyp_hiddens, hyp_tilda):
+        def make_collection(x, x_tilda):
+            tensors = [
+                x,
+                x_tilda,
+                x - x_tilda,
+                x * x_tilda
+            ]
+            return tf.concat(tensors, axis=2)
+        return make_collection(prem_hiddens, prem_tilda), make_collection(hyp_hiddens, hyp_tilda)
+
+    def pooling(self, prem_composed, hyp_composed):
+        prem_avg_pool = tf.reduce_mean(prem_composed, axis=1)
+        prem_max_pool = tf.reduce_max(prem_composed, axis=1)
+        hyp_avg_pool = tf.reduce_mean(hyp_composed, axis=1)
+        hyp_max_pool = tf.reduce_mean(hyp_composed, axis=1)
+
+        return prem_avg_pool, prem_max_pool, hyp_avg_pool, hyp_max_pool
+
     def full_layer(self, prem, hyp, scope):
         with tf.variable_scope(scope):
             prem_hiddens, _, hyp_hiddens, _ = self.encoding(prem, hyp, "encoding")
@@ -114,7 +130,12 @@ class StackedAttentionModel(SNLIModel):
     def classification(self, h_star):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         with tf.variable_scope("classification"):
-            logits = tf.layers.dense(h_star, 3,
+            hidden = tf.layers.dense(h_star, self._hidden_size,
+                                     kernel_initializer=self.dense_init,
+                                     kernel_regularizer=reg,
+                                     activation=self.activation,
+                                     name="hidden")
+            logits = tf.layers.dense(hidden, 3,
                                      kernel_initializer=self.dense_init,
                                      kernel_regularizer=reg,
                                      name="logits")
@@ -124,21 +145,12 @@ class StackedAttentionModel(SNLIModel):
     def add_prediction_op(self):
         with tf.variable_scope("prediction"):
             prem_embed, hyp_embed = self.embedding()
-            prem_proj_orig, hyp_proj_orig = self.projection(prem_embed, hyp_embed, "input_projection")
-
-            prem_proj, hyp_proj = prem_proj_orig, hyp_proj_orig
-            for i in range(self._num_att_layers):
-                prem_proj, hyp_proj = self.full_layer(prem_proj, hyp_proj, "full%s" % (i + 1))
-
-                if self._use_skip and i != self._num_att_layers - 1:
-                    prem_proj, hyp_proj = self.add_skip(prem_proj_orig, hyp_proj_orig,
-                                                        prem_proj, hyp_proj,
-                                                        "skip%s" % (i + 1))
-
-            _, prem_final_state, _, hyp_final_state\
-                = self.encoding(prem_proj, hyp_proj, "output_encoding")
-            prem_final_hidden, hyp_final_hidden = prem_final_state[1], hyp_final_state[1]
-
-            h_star = tf.concat([prem_final_hidden, hyp_final_hidden], axis=1)
+            prem_hiddens, _, hyp_hiddens, _ = self.encoding(prem_embed, hyp_embed, "encoding")
+            prem_tilda, hyp_tilda = self.attention(prem_hiddens, hyp_hiddens, "attention")
+            prem_m, hyp_m = self.collection(prem_hiddens, prem_tilda, hyp_hiddens, hyp_tilda)
+            prem_composed, _, hyp_composed, _ = self.encoding(prem_m, hyp_m, "composition")
+            prem_avg_pool, prem_max_pool, hyp_avg_pool, hyp_max_pool\
+                = self.pooling(prem_composed, hyp_composed)
+            h_star = tf.concat([prem_avg_pool, prem_max_pool, hyp_avg_pool, hyp_max_pool], axis=1)
             preds, logits = self.classification(h_star)
         return preds, logits
