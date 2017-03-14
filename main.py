@@ -8,6 +8,7 @@ from src.models.rnn_encoder import RNNEncoder
 from src.models.attention import AttentionModel
 from src.models.wbw import WBWModel
 from src.models.mLSTM import mLSTMModel
+from src.models.chen import Chen
 from src.utils.dataset import Dataset
 from src.utils.vocab import Vocab
 from src.utils.wvecs import get_glove_vectors
@@ -111,20 +112,21 @@ def get_model(vocab):
         "rec_init": FLAGS.rec_init,
         "missing_indices": missing_indices
     }
+    if FLAGS.model != "SOW":
+        kwargs["use_peepholes"] = FLAGS.use_peepholes
+
     if FLAGS.model == "SOW":
         return SumOfWords(**kwargs)
     elif FLAGS.model == "RNNE":
-        kwargs["use_peepholes"] = FLAGS.use_peepholes
         return RNNEncoder(**kwargs)
     elif FLAGS.model == "ATT":
-        kwargs["use_peepholes"] = FLAGS.use_peepholes
         return AttentionModel(**kwargs)
     elif FLAGS.model == "WBW":
-        kwargs["use_peepholes"] = FLAGS.use_peepholes
         return WBWModel(**kwargs)
     elif FLAGS.model == "mLSTM":
-        kwargs["use_peepholes"] = FLAGS.use_peepholes
         return mLSTMModel(**kwargs)
+    elif FLAGS.model == "CHEN":
+        return Chen(**kwargs)
     else:
         raise ValueError("Unrecognized model: %s." % FLAGS.model)
 
