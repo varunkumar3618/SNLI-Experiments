@@ -64,7 +64,7 @@ class StackedAttentionModel(SNLIModel):
 
             with tf.variable_scope("hyp_encoder"):
                 (hyp_fw_hiddens, hyp_bw_hiddens), hyp_final_state \
-                  = tf.nn.bidirectional_dynamic_rnn(fw_cell, bw_cell, prem, dtype=tf.float32,
+                  = tf.nn.bidirectional_dynamic_rnn(fw_cell, bw_cell, hyp, dtype=tf.float32,
                                       sequence_length=self.sentence2_lens_placeholder)
                 hyp_hiddens = tf.concat([hyp_fw_hiddens, hyp_bw_hiddens], axis=2)
 
