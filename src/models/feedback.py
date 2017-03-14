@@ -174,5 +174,5 @@ class FeedbackModel(SNLIModel):
                     if i == 0:
                         tf.get_variable_scope().reuse_variables()
 
-            preds, logits = self.classification(memory)
+            preds, logits = self.classification(global_memory)
             return preds, logits
