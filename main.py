@@ -75,6 +75,7 @@ model_dir = os.path.join(base_models_dir, FLAGS.name)
 checkpoint_dir = os.path.join(model_dir, "checkpoint")
 checkpoint_path = os.path.join(checkpoint_dir, "model.ckpt")
 results_dir = os.path.join(model_dir, "results")
+train_log_dir = os.path.join(model_dir, "train")
 
 if not os.path.isdir(base_models_dir):
     os.mkdir(base_models_dir)
@@ -84,6 +85,8 @@ if not os.path.isdir(checkpoint_dir):
     os.mkdir(checkpoint_dir)
 if not os.path.isdir(results_dir):
     os.mkdir(results_dir)
+if not os.path.isdir(train_log_dir):
+    os.mkdir(train_log_dir)
 
 if FLAGS.glove_type == "wiki":
     glove_file = os.path.join(os.path.join(FLAGS.data_dir, "glove.6B"), "glove.6B.%sd.txt" % FLAGS.word_embed_dim)
@@ -134,13 +137,14 @@ def get_model(vocab):
     else:
         raise ValueError("Unrecognized model: %s." % FLAGS.model)
 
-def run_train_epoch(sess, model, dataset, epoch_num):
+def run_train_epoch(sess, model, dataset, train_writer, epoch_num):
     print "="*79
     print "Epoch: %s" % (epoch_num + 1)
     prog = Progbar(target=dataset.split_num_batches("train", FLAGS.batch_size))
     for i, batch in enumerate(dataset.get_shuffled_iterator("train", FLAGS.batch_size)):
-        loss = model.train_on_batch(sess, *batch)
+        loss, summary = model.train_on_batch(sess, *batch)
         prog.update(i + 1, [("train loss", loss)])
+        train_writer.add_summary(summary, global_step=epoch_num * dataset.split_size("train") + i)
     print "="*79
 
 def run_eval_epoch(sess, model, dataset, split):
@@ -165,6 +169,7 @@ def run_eval_epoch(sess, model, dataset, split):
     return accuracy, np.concatenate(preds)
 
 def train(model, dataset):
+    train_writer = tf.summary.FileWriter(train_log_dir)
     if FLAGS.save:
         saver = tf.train.Saver(max_to_keep=1)
     with tf.Session() as sess:
@@ -172,11 +177,12 @@ def train(model, dataset):
         sess.run(tf.local_variables_initializer())
         best_accuracy = 0
         for epoch in range(FLAGS.num_epochs):
-            run_train_epoch(sess, model, dataset, epoch)
+            run_train_epoch(sess, model, dataset, train_writer, epoch)
             dev_accuracy, _ = run_eval_epoch(sess, model, dataset, "train" if FLAGS.debug else "dev")
             if dev_accuracy > best_accuracy and FLAGS.save:
                 saver.save(sess, checkpoint_path)
                 best_accuracy = dev_accuracy
+    train_writer.close()
 
 def test(model, dataset, split):
     saver = tf.train.Saver()
@@ -212,6 +218,10 @@ def main(_):
         elif FLAGS.mode == "dev":
             test(model, dataset, "dev")
         elif FLAGS.mode == "test":
+            test(model, dataset, "test")
+        elif FLAGS.mode == "all":
+            train(model, dataset)
+            test(model, dataset, "dev")
             test(model, dataset, "test")
         else:
             raise ValueError("Unrecognized mode: %s." % FLAGS.mode)

@@ -130,13 +130,15 @@ class SNLIModel(object):
         Returns:
             loss: A 0-d tensor (scalar) output
         """
-        return (
+        loss = (
             tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
                 logits=logits,
                 labels=self.labels_placeholder)
             )
             + tf.reduce_sum(sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)))
         )
+        tf.summary.scalar("loss", loss)
+        return loss
 
     def add_acc_op(self, pred):
         """Adds Ops for the accuracy to the computational graph.
@@ -147,6 +149,14 @@ class SNLIModel(object):
             acc: A 0-d tensor (scalar) output
         """
         return tf.contrib.metrics.accuracy(pred, self.labels_placeholder)
+
+    def add_summary_op(self):
+        """Adds the Op to generate summary data.
+
+        Returns:
+            summary_op: A serialized Tensor<string> containing the Summary protobuf
+        """
+        return tf.summary.merge_all()
 
     def add_training_op(self, loss):
         """Sets up the training Ops.
@@ -191,8 +201,9 @@ class SNLIModel(object):
         feed = self.create_feed_dict(sentence1_batch, sentence1_lens_batch,
                                      sentence2_batch, sentence2_lens_batch,
                                      labels_batch, is_training=True)
-        _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
-        return loss
+        _, loss, summary = sess.run([self.train_op, self.loss, self.summary_op],
+                                    feed_dict=feed)
+        return loss, summary
 
     def evaluate_on_batch(self, sess,
                           sentence1_batch, sentence1_lens_batch,
@@ -243,3 +254,4 @@ class SNLIModel(object):
         self.loss = self.add_loss_op(self.pred, self.logits)
         self.train_op = self.add_training_op(self.loss)
         self.acc_op = self.add_acc_op(self.pred)
+        self.summary_op = self.add_summary_op()
