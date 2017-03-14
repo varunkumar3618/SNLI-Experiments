@@ -6,7 +6,7 @@ from src.utils.ops import get_embedding
 class StackedAttentionModel(SNLIModel):
     def __init__(self, embedding_matrix, update_embeddings,
                  hidden_size, use_peepholes,
-                 l2_reg, num_att_layers=2,
+                 l2_reg, num_att_layers=2, use_skip=True,
                  use_lens=True, use_dropout=True,
                  *args, **kwargs):
         super(StackedAttentionModel, self).__init__(use_lens=use_lens, use_dropout=use_dropout,
@@ -17,6 +17,7 @@ class StackedAttentionModel(SNLIModel):
         self._use_peepholes = use_peepholes
         self._l2_reg = l2_reg
         self._num_att_layers = num_att_layers
+        self._use_skip = True
 
     def embedding(self):
         with tf.variable_scope("embedding"):
@@ -85,6 +86,23 @@ class StackedAttentionModel(SNLIModel):
             beta, alpha = self.attention(prem, hyp, "inter")
         return tf.concat([prem, beta], axis=2), tf.concat([hyp, alpha], axis=2)
 
+    def add_skip(self, prem_orig, hyp_orig, prem_repr, hyp_repr, scope):
+        with tf.variable_scope(scope):
+            G_prem_in = tf.concat([prem_orig, prem_repr], axis=2)
+            G_prem = tf.layers.dense(G_prem_in, self._hidden_size,
+                                     kernel_initializer=self.dense_init,
+                                     kernel_regularizer=reg,
+                                     activation=tf.nn.sigmoid, name="prem_gate")
+            prem = G_prem * prem_orig + (1 - G_prem) * prem_repr
+
+            G_hyp_in = tf.concat([hyp_orig, hyp_repr], axis=2)
+            G_hyp = tf.layers.dense(G_prem_in, self._hidden_size,
+                                    kernel_initializer=self.dense_init,
+                                    kernel_regularizer=reg,
+                                    activation=tf.nn.sigmoid, name="hyp_gate")
+            hyp = G_hyp * hyp_orig + (1 - G_hyp) * hyp_repr
+        return prem, hyp
+
     def full_layer(self, prem, hyp, scope):
         with tf.variable_scope(scope):
             prem_hiddens, _, hyp_hiddens, _ = self.encoding(prem, hyp, "encoding")
@@ -105,10 +123,16 @@ class StackedAttentionModel(SNLIModel):
     def add_prediction_op(self):
         with tf.variable_scope("prediction"):
             prem_embed, hyp_embed = self.embedding()
-            prem_proj, hyp_proj = self.projection(prem_embed, hyp_embed, "input_projection")
+            prem_proj_orig, hyp_proj_orig = self.projection(prem_embed, hyp_embed, "input_projection")
 
+            prem_proj, hyp_proj = prem_proj_orig, hyp_proj_orig
             for i in range(self._num_att_layers):
                 prem_proj, hyp_proj = self.full_layer(prem_proj, hyp_proj, "full%s" % (i + 1))
+
+                if self._use_skip and i != self._num_att_layers - 1:
+                    prem_proj, hyp_proj = self.add_skip(prem_proj_orig, hyp_proj_orig,
+                                                        prem_proj, hyp_proj,
+                                                        "skip%" + (i + 1))
 
             _, prem_final_state, _, hyp_final_state\
                 = self.encoding(prem_proj, hyp_proj, "output_encoding")

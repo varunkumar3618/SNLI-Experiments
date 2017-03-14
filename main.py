@@ -36,6 +36,8 @@ flags.DEFINE_float("max_grad_norm", 5., "The maxmium norm that gradients should 
 flags.DEFINE_string("activation", "tanh", "The activation to use in dense layers.")
 flags.DEFINE_string("dense_init", "xavier", "The initializer to use in dense layers.")
 flags.DEFINE_string("rec_init", "xavier", "The initializer to use in recurrent layers.")
+flags.DEFINE_integer("num_att_layers", 2, "The number of layers to use in stacked models.")
+flags.DEFINE_bool("use_skip", True, "Whether to use skip connections in stacked models.")
 
 # Training
 flags.DEFINE_integer("batch_size", 100, "The batch size.")
@@ -122,6 +124,8 @@ def get_model(vocab):
         return WBWModel(**kwargs)
     elif FLAGS.model == "STK":
         kwargs["use_peepholes"] = FLAGS.use_peepholes
+        kwargs["num_att_layers"] = FLAGS.num_att_layers
+        kwargs["use_skip"] = FLAGS.use_skip
         return StackedAttentionModel(**kwargs)
     else:
         raise ValueError("Unrecognized model: %s." % FLAGS.model)
