@@ -132,7 +132,7 @@ class StackedAttentionModel(SNLIModel):
                 if self._use_skip and i != self._num_att_layers - 1:
                     prem_proj, hyp_proj = self.add_skip(prem_proj_orig, hyp_proj_orig,
                                                         prem_proj, hyp_proj,
-                                                        "skip%" % (i + 1))
+                                                        "skip%s" % (i + 1))
 
             _, prem_final_state, _, hyp_final_state\
                 = self.encoding(prem_proj, hyp_proj, "output_encoding")
