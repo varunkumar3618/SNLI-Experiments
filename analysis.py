@@ -60,6 +60,22 @@ def confusion(vocab, dataset):
     plt.xlabel('Predicted label')
     plt.savefig(FLAGS.analysis_path)
 
+def error_report(vocab, dataset):
+    true_labels = dataset.get_true_labels(FLAGS.split)
+    sentence1s = dataset.get_sentence1(FLAGS.split)
+    sentence2s = dataset.get_sentence2(FLAGS.split)
+    predicted_labels = np.load(os.path.join(results_dir, "predictions_%s.npy" % FLAGS.split))
+
+    with open(FLAGS.analysis_path, "wb") as outf:
+        for i, (true_label, sentence1, sentence2, predicted_label)\
+                in enumerate(zip(true_labels, sentence1s, sentence2s, predicted_labels)):
+            outf.write("%s)\n" % i)
+            outf.write("Sentence1: %s\n" % sentence1)
+            outf.write("Sentence2: %s\n" % sentence2)
+            outf.write("True label: %s\n" % true_label)
+            outf.write("Predicted label: %s\n" % predicted_label)
+            outf.write("\n")
+
 def main(_):
     vocab = Vocab(snli_dir, vocab_file, FLAGS.max_vocab_size)
     dataset = Dataset(snli_dir, regular_data_file, debug_data_file, vocab,
@@ -67,6 +83,8 @@ def main(_):
 
     if FLAGS.analysis_type == "confusion":
         confusion(vocab, dataset)
+    elif FLAGS.analysis_type == "error_report":
+        error_report(vocab, dataset)
     else:
         raise ValueError("Unrecognized analysis: %s" % FLAGS.analysis_type)
 

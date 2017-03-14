@@ -67,6 +67,12 @@ class Dataset(object):
     def get_true_labels(self, split):
         return self._dataframes[split]["l_int"].values
 
+    def get_sentence1(self, split):
+        return self._dataframes[split]["sentence1"].values
+
+    def get_sentence2(self, split):
+        return self._dataframes[split]["sentence2"].values
+
     def _make_batch(self, df):
         # The sequence lengths are required in order to use Tensorflow's dynamic rnn functions correctly
         return np.stack(df["s1_padded"]), np.stack(df["s1_len"]),\
