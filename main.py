@@ -9,6 +9,7 @@ from src.models.attention import AttentionModel
 from src.models.wbw import WBWModel
 from src.models.mLSTM import mLSTMModel
 from src.models.chen import Chen
+from src.models.feedback import FeedbackModel
 from src.utils.dataset import Dataset
 from src.utils.vocab import Vocab
 from src.utils.wvecs import get_glove_vectors
@@ -42,6 +43,7 @@ flags.DEFINE_float("max_grad_norm", 5., "The maxmium norm that gradients should 
 flags.DEFINE_string("activation", "tanh", "The activation to use in dense layers.")
 flags.DEFINE_string("dense_init", "xavier", "The initializer to use in dense layers.")
 flags.DEFINE_string("rec_init", "xavier", "The initializer to use in recurrent layers.")
+flags.DEFINE_integer("feedback_iters", 4, "Number of feedback iterations, used in feedback models.")
 
 # Training
 flags.DEFINE_integer("batch_size", 100, "The batch size.")
@@ -127,6 +129,9 @@ def get_model(vocab):
         return mLSTMModel(**kwargs)
     elif FLAGS.model == "CHEN":
         return Chen(**kwargs)
+    elif FLAGS.model == "FBK":
+        kwargs["feedback_iters"] = FLAGS.feedback_iters
+        return FeedbackModel(**kwargs)
     else:
         raise ValueError("Unrecognized model: %s." % FLAGS.model)
 
