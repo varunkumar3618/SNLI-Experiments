@@ -12,7 +12,7 @@ GloVe data: http://nlp.stanford.edu/data/glove.6B.zip
 
 """
 
-def get_glove_vectors(glove_file, glove_saved_file, dim, vocab, dataset_dir, window_size):
+def get_glove_vectors(glove_file, glove_saved_file, dim, vocab, dataset_dir):
     glove_saved_file = glove_file[:-4] + "_saved"
     glove_saved_file += ".npy"
     if os.path.isfile(glove_saved_file):
