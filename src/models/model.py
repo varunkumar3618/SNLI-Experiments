@@ -40,7 +40,7 @@ class SNLIModel(object):
         self.activation = get_activation(activation)
         self.dense_init = get_initializer(dense_init)
         self.rec_init = get_initializer(rec_init)
-        self.embeddings = get_embeddings(embedding_matrix, embedding_mode, missing_indices)
+        self.embeddings = get_embeddings(embedding_matrix, embedding_train_mode, missing_indices)
 
     def apply_dropout(self, tensor):
         """Applies dropout to a tensor"""
