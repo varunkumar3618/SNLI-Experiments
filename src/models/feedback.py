@@ -123,7 +123,7 @@ class FeedbackModel(SNLIModel):
             prem_embed, hyp_embed = self.embedding()
             prem_hiddens, _, hyp_hiddens, _ = self.encoding(prem_embed, hyp_embed, "encoding")
 
-            memory = tf.zeros(shape=[self._hidden_size])
+            memory = tf.zeros(shape=[tf.shape(prem_embed)[0], self._hidden_size])
             memory_cell = self.make_gru_cell(self._hidden_size)
 
             with tf.variable_scope("feedback"):
