@@ -8,7 +8,7 @@ def get_embedding(indices, embedding_matrix, update_embeddings,
         if train_unseen_vocab:
             fixed_embedding = tf.constant(embedding_matrix, dtype=tf.float32)
             trainable_embedding = tf.get_variable("new_embed", 
-                                        initializer=tf.contrib.layers.xavier_initializer(), 
+                                        initializer=tf.random_normal_initializer(), 
                                         shape=embedding_matrix.shape)
             
             missing_one_hot = np.zeros(len(embedding_matrix))
