@@ -51,8 +51,7 @@ class Vocab(object):
             for word, id in word_to_id.items():
                 file.write("{}\t{}\n".format(word, id))
 
-        print("vocab of size {} written to {}, with _PAD_ token == 0, _UNK_ token == 1".format(
-            vocab_size, vocab_path))
+        print("vocab of size {} written to {}".format(vocab_size, vocab_path))
 
     def size(self):
         return len(self.token_id) + 2  # +1 for UNK & PAD
