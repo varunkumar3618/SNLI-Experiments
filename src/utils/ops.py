@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 
-def get_embeddings(embedding_matrix_np, embedding_mode, missing_indices):
+def get_embeddings(embedding_matrix, embedding_mode, missing_indices):
     with tf.variable_scope("embeddings"):
         if embedding_mode == "all":
             original_embeddings = tf.get_variable(
