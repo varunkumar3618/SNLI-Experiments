@@ -94,10 +94,12 @@ class FeedbackModel(SNLIModel):
         return beta, alpha
 
     def collection(self, prem_hiddens, prem_tilda, hyp_hiddens, hyp_tilda, memory):
-        memory_att = tf.layers.dense(memory, self._hidden_size,
-                                     kernel_initializer=self.dense_init,
-                                     kernel_regularizer=reg,
-                                     use_bias=False)
+        reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
+        with tf.variable_scope("collection"):
+            memory_att = tf.layers.dense(memory, self._hidden_size,
+                                         kernel_initializer=self.dense_init,
+                                         kernel_regularizer=reg,
+                                         use_bias=False)
         def make_collection(x, x_tilda):
             tensors = [
                 x,
