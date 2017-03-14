@@ -73,8 +73,8 @@ def error_report(vocab, dataset):
             outf.write("%s)\n" % i)
             outf.write("Sentence1: %s\n" % sentence1)
             outf.write("Sentence2: %s\n" % sentence2)
-            outf.write("True label: %s\n" % true_label)
-            outf.write("Predicted label: %s\n" % predicted_label)
+            outf.write("True label: %s\n" % dataset.int_to_label(true_label))
+            outf.write("Predicted label: %s\n" % dataset.int_to_label(predicted_label))
             outf.write("\n")
 
 def main(_):

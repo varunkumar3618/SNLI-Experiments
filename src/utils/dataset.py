@@ -62,6 +62,10 @@ class Dataset(object):
             dataframes[split] = df
         return dataframes
 
+    def int_to_label(self, i):
+        ints_to_labels = {0: "entailment", 1: "neutral", 2: "contradiction"}
+        return ints_to_labels[i]
+
     def get_true_labels(self, split):
         return self._dataframes[split]["l_int"].values
 
