@@ -133,7 +133,7 @@ class FeedbackModel(SNLIModel):
             with tf.variable_scope("feedback"):
                 for i in range(self._feedback_iters):
                     episode = self.episode(prem_hiddens, hyp_hiddens, memory, "attention")
-                    memory = memory_cell(episode, memory)
+                    memory, _ = memory_cell(episode, memory)
 
                     if i == 0:
                         tf.get_variable_scope().reuse_variables()
