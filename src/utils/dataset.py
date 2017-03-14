@@ -64,6 +64,9 @@ class Dataset(object):
             dataframes[split] = df
         return dataframes
 
+    def get_true_labels(self, split):
+        return self._dataframes[split]["l_int"].values
+
     def _make_batch(self, df):
         # The sequence lengths are required in order to use Tensorflow's dynamic rnn functions correctly
         return np.stack(df["s1_padded"]), np.stack(df["s1_len"]),\
