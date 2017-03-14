@@ -22,44 +22,48 @@ class FeedbackModel(SNLIModel):
             hyp_embed = self.embed_indices(self.sentence2_placeholder)
         return prem_embed, hyp_embed
 
-    def make_lstm_cell(self):
-        cell = tf.contrib.rnn.LSTMCell(
-            self._hidden_size,
-            use_peepholes=self._use_peepholes,
-            initializer=self.rec_init
-        )
-        cell = self.apply_dropout_wrapper(cell)
-        return cell
-
-    def make_gru_cell(self, size):
-        cell = tf.contrib.rnn.GRUCell(
-            self._hidden_size
-        )
-        cell = self.apply_dropout_wrapper(cell)
-        return cell
-
-    def run_birnns(self, fw_cell, bw_cell, prem, hyp, scope):
+    def encoding(self, prem, hyp, scope):
+        reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         with tf.variable_scope(scope):
+            fw_cell = tf.contrib.rnn.LSTMCell(
+                self._hidden_size,
+                use_peepholes=self._use_peepholes,
+                initializer=self.rec_init
+            )
+            bw_cell = tf.contrib.rnn.LSTMCell(
+                self._hidden_size,
+                use_peepholes=self._use_peepholes,
+                initializer=self.rec_init
+            )
+            fw_cell = self.apply_dropout_wrapper(fw_cell)
+            bw_cell = self.apply_dropout_wrapper(bw_cell)
             with tf.variable_scope("prem_encoder"):
                 (prem_fw_hiddens, prem_bw_hiddens), prem_final_state\
                     = tf.nn.bidirectional_dynamic_rnn(fw_cell, bw_cell, prem, dtype=tf.float32,
                                                       sequence_length=self.sentence1_lens_placeholder)
                 prem_hiddens = tf.concat([prem_fw_hiddens, prem_bw_hiddens], axis=2)
-                prem_final = tf.concat(prem_final_state, axis=1)
 
             with tf.variable_scope("hyp_encoder"):
                 (hyp_fw_hiddens, hyp_bw_hiddens), hyp_final_state \
                   = tf.nn.bidirectional_dynamic_rnn(fw_cell, bw_cell, hyp, dtype=tf.float32,
                                       sequence_length=self.sentence2_lens_placeholder)
                 hyp_hiddens = tf.concat([hyp_fw_hiddens, hyp_bw_hiddens], axis=2)
-                hyp_final = tf.concat(hyp_final_state, axis=1)
-        return prem_hiddens, prem_final, hyp_hiddens, hyp_final
 
-    def encoding(self, prem, hyp, scope):
+        return prem_hiddens, prem_final_state, hyp_hiddens, hyp_final_state
+
+    def projection(self, prem, hyp, scope):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
-        fw_cell = self.make_gru_cell(self._hidden_size)
-        bw_cell = self.make_gru_cell(self._hidden_size)
-        return self.run_birnns(fw_cell, bw_cell, prem, hyp, scope)
+        with tf.variable_scope(scope):
+
+            prem_proj = tf.layers.dense(prem, self._hidden_size,
+                                        kernel_initializer=self.dense_init,
+                                        kernel_regularizer=reg,
+                                        activation=self.activation, name="prem_proj")
+            hyp_proj = tf.layers.dense(hyp, self._hidden_size,
+                                       kernel_initializer=self.dense_init,
+                                       kernel_regularizer=reg,
+                                       activation=self.activation, name="hyp_proj")
+        return self.apply_dropout(prem_proj), self.apply_dropout(hyp_proj)
 
     def classification(self, h_star):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
@@ -112,7 +116,7 @@ class FeedbackModel(SNLIModel):
         with tf.variable_scope(scope):
             prem_tilda, hyp_tilda = self.attention(prem_hiddens, hyp_hiddens, scope)
             prem_m, hyp_m = self.collection(prem_hiddens, prem_tilda, hyp_hiddens, hyp_tilda, memory)
-            prem_composed, _, hyp_composed, _ = self.encoding(prem_m, hyp_m, "composition")
+            prem_composed, hyp_composed = self.projection(prem_m, hyp_m, "composition")
             prem_avg_pool, prem_max_pool, hyp_avg_pool, hyp_max_pool\
                 = self.pooling(prem_composed, hyp_composed)
             h_star = tf.concat([prem_avg_pool, prem_max_pool, hyp_avg_pool, hyp_max_pool], axis=1)
@@ -124,7 +128,7 @@ class FeedbackModel(SNLIModel):
             prem_hiddens, _, hyp_hiddens, _ = self.encoding(prem_embed, hyp_embed, "encoding")
 
             memory = None
-            memory_cell = self.make_gru_cell(self._hidden_size)
+            memory_cell = tf.contrib.rnn.GRUCell(self._hidden_size)
 
             with tf.variable_scope("feedback"):
                 for i in range(self._feedback_iters):
@@ -132,9 +136,9 @@ class FeedbackModel(SNLIModel):
 
                     if i == 0:
                         memory = episode
+                        tf.get_variable_scope().reuse_variables()
                     else:
                         memory = memory_cell(episode, memory)
-                        tf.get_variable_scope().reuse_variables()
 
             preds, logits = self.classification(memory)
             return preds, logits
