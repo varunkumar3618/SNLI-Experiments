@@ -1,7 +1,6 @@
 import tensorflow as tf
 
 from src.models.attention import AttentionModel
-from src.utils.ops import get_embedding, matmul_3d_1d, matmul_3d_2d
 
 
 class WBWCell(tf.contrib.rnn.RNNCell):

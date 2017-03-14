@@ -1,7 +1,6 @@
 import tensorflow as tf
 
 from src.models.sow import SumOfWords
-from src.utils.ops import get_embedding
 
 
 class RNNEncoder(SumOfWords):
@@ -18,6 +17,7 @@ class RNNEncoder(SumOfWords):
                 use_peepholes=self._use_peepholes,
                 initializer=self.rec_init
             )
+            cell = self.apply_dropout_wrapper(cell)
             with tf.variable_scope("prem"):
                 # Harcoded to use an LSTM
                 _, (_, prem_encoded) = tf.nn.dynamic_rnn(cell, prem_proj, dtype=tf.float32,

@@ -1,7 +1,6 @@
 import tensorflow as tf
 
 from src.models.attention import AttentionModel
-from src.utils.ops import get_embedding, matmul_3d_1d, matmul_3d_2d
 
 """ The mLSTM model is based on the paper by Cheng and Jiang. Since the basic RNNCell
 format does not allow access to the previous h (just the old state, which corresponds to

@@ -1,5 +1,7 @@
 import tensorflow as tf
 
+from src.utils.ops import get_embeddings
+
 def get_activation(activation):
     if activation == "tanh":
         return tf.tanh
@@ -24,7 +26,7 @@ class SNLIModel(object):
     """
     def __init__(self, learning_rate, max_seq_len,
                  activation, dense_init, rec_init,
-                 train_unseen_vocab, missing_indices,
+                 missing_indices, embedding_matrix, embedding_train_mode,
                  use_lens=False,
                  dropout_rate=-1, use_dropout=False,
                  clip_gradients=False, max_grad_norm=-1):
@@ -38,15 +40,23 @@ class SNLIModel(object):
         self.activation = get_activation(activation)
         self.dense_init = get_initializer(dense_init)
         self.rec_init = get_initializer(rec_init)
-        self._train_unseen_vocab = train_unseen_vocab
-        self._missing_indices = missing_indices
-
+        self.embeddings = get_embeddings(embedding_matrix, embedding_mode, missing_indices)
 
     def apply_dropout(self, tensor):
         """Applies dropout to a tensor"""
         if not self._use_dropout:
             raise ValueError("The model has not been configured to use dropout.")
-        return tf.layers.dropout(tensor, rate=self._dropout_rate, training=self.training_placeholder)
+        return tf.layers.dropout(tensor, rate=self.dropout_placeholder)
+
+    def apply_dropout_wrapper(self, cell, on_input=False, on_output=True):
+        """Applies a dropout wrapper to an rnn cell"""
+        if not self._use_dropout:
+            raise ValueError("The model has not been configured to use dropout.")
+        return tf.contrib.rnn.DropoutWrapper(
+            cell,
+            input_keep_prob=1. - self.dropout_placeholder if on_input else 1.,
+            output_keep_prob=1. - self.dropout_placeholder if on_output else 1.
+        )
 
     def add_placeholders(self):
         """Adds placeholder variables to tensorflow computational graph.
@@ -68,7 +78,7 @@ class SNLIModel(object):
             self.sentence2_lens_placeholder = tf.placeholder(tf.int64, shape=[None], name="sentence2_lengths")
 
         if self._use_dropout:
-            self.training_placeholder = tf.placeholder(tf.bool)
+            self.dropout_placeholder = tf.placeholder(tf.float32)
 
     def create_feed_dict(self,
                          sentence1_batch, sentence1_lens_batch,
@@ -108,7 +118,7 @@ class SNLIModel(object):
             feed_dict[self.labels_placeholder] = labels_batch
 
         if self._use_dropout:
-            feed_dict[self.training_placeholder] = is_training
+            feed_dict[self.dropout_placeholder] = self._dropout_rate if is_training else 0.
 
         return feed_dict
 

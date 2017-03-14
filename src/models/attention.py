@@ -1,18 +1,16 @@
 import tensorflow as tf
 
 from src.models.model import SNLIModel
-from src.utils.ops import get_embedding, matmul_3d_1d, matmul_3d_2d
+from src.utils.ops import embed_indices
 
 class AttentionModel(SNLIModel):
-    def __init__(self, embedding_matrix, update_embeddings,
+    def __init__(self,
                  hidden_size, use_peepholes,
                  l2_reg,
                  use_lens=True, use_dropout=True,
                  *args, **kwargs):
         super(AttentionModel, self).__init__(use_lens=use_lens, use_dropout=use_dropout,
                                              *args, **kwargs)
-        self._embedding_matrix = embedding_matrix
-        self._update_embeddings = update_embeddings
         self._hidden_size = hidden_size
         self._use_peepholes = use_peepholes
         self._l2_reg = l2_reg
@@ -20,17 +18,8 @@ class AttentionModel(SNLIModel):
     def embedding(self):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         with tf.variable_scope("embedding"):
-            # Premise and hypothesis embedding tensors, both with shape
-            # [batch_size, max_len_seq, word_embed_dim]
-            prem_embed = get_embedding(self.sentence1_placeholder, self._embedding_matrix,
-                                       self._update_embeddings, self._train_unseen_vocab,
-                                       self._missing_indices)
-            hyp_embed = get_embedding(self.sentence2_placeholder, self._embedding_matrix,
-                                      self._update_embeddings, self._train_unseen_vocab,
-                                      self._missing_indices, reuse=True)
-
-            prem_embed = self.apply_dropout(prem_embed)
-            hyp_embed = self.apply_dropout(hyp_embed)
+            prem_embed = embed_indices(self.sentence1_placeholder, self.embeddings)
+            hyp_embed = embed_indices(self.sentence2_placeholder, self.embeddings)
 
             prem_proj = tf.layers.dense(prem_embed, self._hidden_size,
                                         kernel_initializer=self.dense_init,
@@ -40,6 +29,8 @@ class AttentionModel(SNLIModel):
                                        kernel_initializer=self.dense_init,
                                        kernel_regularizer=reg,
                                        activation=self.activation, name="hyp_proj")
+            prem_proj = self.apply_dropout(prem_proj)
+            hyp_proj = self.apply_dropout(hyp_proj)
         return prem_proj, hyp_proj
 
     def encoding(self, prem_proj, hyp_proj):
@@ -49,6 +40,7 @@ class AttentionModel(SNLIModel):
                 use_peepholes=self._use_peepholes,
                 initializer=self.rec_init
             )
+            cell = self.apply_dropout_wrapper(cell)
             with tf.variable_scope("prem_encoder"):
                 # prem_states.shape => [batch_size, max_len_seq, _hidden_size]
                 prem_hiddens, prem_final_state \

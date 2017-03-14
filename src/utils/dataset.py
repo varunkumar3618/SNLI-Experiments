@@ -21,14 +21,12 @@ class Dataset(object):
                                                        max_seq_length, debug)
             print "Pickling the data object..."
             with open(data_file, "wb") as f:
-                pickle.dump((self._dataframes, max_seq_length, vocab.max_vocab_size,
-                            vocab.vocab_file, debug), f)
+                pickle.dump((self._dataframes, max_seq_length, debug), f)
 
     def _file_is_valid(self, data_file, vocab, max_seq_length, debug):
         with open(data_file, "r") as f:
-            _, max_seq_length_, max_vocab_size, vocab_file, debug_ = pickle.load(f)
-            return max_seq_length == max_seq_length_ and max_vocab_size == vocab.max_vocab_size\
-                and vocab_file == vocab.vocab_file and debug == debug_
+            _, max_seq_length_, debug_ = pickle.load(f)
+            return max_seq_length == max_seq_length and debug == debug_
 
     def _create_dataframes(self, snli_dir, data_file, vocab, max_seq_length, debug=False):
         dataframes = {}
