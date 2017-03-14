@@ -54,7 +54,7 @@ class Vocab(object):
             self.token_id[token] = idx
             self.id_token[idx] = token
 
-    def create_vocab(self, dataset_path, vocab_path, max_vocab_size, train_unseen_vocab):
+    def create_vocab(self, dataset_path, vocab_path, max_vocab_size, use_all):
         print("generating vocab from dataset at {}".format(dataset_path))
         all_words = []
         for dataset in ["snli_1.0_train.jsonl", "snli_1.0_dev.jsonl", "snli_1.0_test.jsonl"]:
