@@ -119,6 +119,7 @@ class FeedbackModel(SNLIModel):
         return prem_avg_pool, prem_max_pool, hyp_avg_pool, hyp_max_pool
 
     def episode(self, prem_hiddens, hyp_hiddens, global_memory, local_prem_memory, local_hyp_memory, scope):
+        reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         with tf.variable_scope(scope):
             prem_tilda, hyp_tilda = self.attention(prem_hiddens, hyp_hiddens, scope)
             prem_m, hyp_m = self.collection(prem_hiddens, prem_tilda, hyp_hiddens, hyp_tilda,
