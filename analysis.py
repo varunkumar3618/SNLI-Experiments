@@ -16,7 +16,6 @@ flags.DEFINE_string("data_dir", "data/", "The location of the data files.")
 flags.DEFINE_string("name", "model", "The name of the model, used to save logs and checkpoints.")
 
 # Data
-flags.DEFINE_integer("max_vocab_size", 10000, "The maximum size of the vocabulary.")
 flags.DEFINE_integer("max_seq_len", 100, "The maximum length of a sentence. Sentences longer than this will be truncated.")
 
 #Analysis
@@ -77,7 +76,7 @@ def error_report(vocab, dataset):
             outf.write("\n")
 
 def main(_):
-    vocab = Vocab(snli_dir, vocab_file, FLAGS.max_vocab_size)
+    vocab = Vocab(snli_dir, vocab_file)
     dataset = Dataset(snli_dir, regular_data_file, debug_data_file, vocab,
                       FLAGS.max_seq_len, debug=True)
 
