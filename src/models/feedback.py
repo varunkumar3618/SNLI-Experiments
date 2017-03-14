@@ -136,6 +136,32 @@ class FeedbackModel(SNLIModel):
                                              name="global")
         return global_episode, prem_composed, hyp_composed
 
+    def gating(self, old, new, scope):
+        with tf.variable_scope(scope):
+            old_proj = tf.layers.dense(old, self._hidden_size,
+                                       kernel_initializer=self.dense_init,
+                                       kernel_regularizer=reg,
+                                       use_bias=False,
+                                       name="old_proj")
+            hidden_axis = old_proj.get_shape().ndims - 1
+            e = tf.expand_dims(tf.reduce_sum(old_proj * new, axis=hidden_axis), axis=hidden_axis)
+            updated = e * old + (1 - e) * new
+        return updated
+
+    def local_gating(self, old, new, scope):
+        with tf.variable_scope(scope):
+            old_proj = tf.layers.dense(old, self._hidden_size,
+                                       kernel_initializer=self.dense_init,
+                                       kernel_regularizer=reg,
+                                       use_bias=False,
+                                       name="old_proj")
+            e = tf.einsum("aij,aij->ai", old_proj, new)
+            e = tf.expand_dims(e, axis=1)
+            updated = e * old + (1 - e) * new
+        return updated
+
+
+
     def gating(self, old, new, scope, three_dim=False):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         with tf.variable_scope(scope):
@@ -144,14 +170,15 @@ class FeedbackModel(SNLIModel):
                                        kernel_regularizer=reg,
                                        use_bias=False,
                                        name="old_proj")
-            e = tf.tanh(tf.tensordot(old_proj, new, axes=1))
+            e = tf.einsum("aij,aik->")
+            e = tf.sigmoid(tf.tensordot(old_proj, new, axes=1))
 
             if three_dim:
                 e = tf.expand_dims(e, axis=2)
             else:
                 e = tf.expand_dims(e, axis=1)
 
-            return e * old + (1 - e) * new
+            return 
 
     def add_prediction_op(self):
         with tf.variable_scope("prediction"):
