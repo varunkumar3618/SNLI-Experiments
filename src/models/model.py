@@ -60,7 +60,7 @@ class SNLIModel(object):
         )
 
     def embed_indices(self, indices):
-        embedded_vectors = tf.nn.embedding_lookup(self.embeddings, indices)
+        embedded_vectors = tf.nn.embedding_lookup(self._embeddings, indices)
         output_shape = [tf.shape(indices)[0], tf.shape(indices)[1], self._embedding_size]
         return tf.reshape(embedded_vectors, shape=output_shape)
 
