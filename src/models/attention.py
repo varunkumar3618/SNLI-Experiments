@@ -1,7 +1,6 @@
 import tensorflow as tf
 
 from src.models.model import SNLIModel
-from src.utils.ops import embed_indices
 
 class AttentionModel(SNLIModel):
     def __init__(self,
@@ -18,8 +17,8 @@ class AttentionModel(SNLIModel):
     def embedding(self):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         with tf.variable_scope("embedding"):
-            prem_embed = embed_indices(self.sentence1_placeholder, self.embeddings)
-            hyp_embed = embed_indices(self.sentence2_placeholder, self.embeddings)
+            prem_embed = self.embed_indices(self.sentence1_placeholder)
+            hyp_embed = self.embed_indices(self.sentence2_placeholder)
 
             prem_proj = tf.layers.dense(prem_embed, self._hidden_size,
                                         kernel_initializer=self.dense_init,

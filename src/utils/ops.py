@@ -25,8 +25,3 @@ def get_embeddings(embedding_matrix, embedding_mode, missing_indices):
         missing = tf.expand_dims(tf.constant(missing_one_hot, dtype=tf.float32), axis=1)
 
         return original_embeddings * (1 - missing) + new_embeddings * missing
-
-def embed_indices(indices, embeddings):
-    embedded_vectors = tf.nn.embedding_lookup(embeddings, indices)
-    output_shape = [tf.shape(indices)[0], tf.shape(indices)[1], tf.shape(embeddings)[1]]
-    return tf.reshape(embedded_vectors, shape=output_shape)

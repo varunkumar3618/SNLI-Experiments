@@ -36,11 +36,12 @@ class SNLIModel(object):
         self._dropout_rate = dropout_rate
         self._clip_gradients = clip_gradients
         self._max_grad_norm = max_grad_norm
+        self._embedding_size = embedding_matrix.shape[1]
+        self._embeddings = get_embeddings(embedding_matrix, embedding_train_mode, missing_indices)
 
         self.activation = get_activation(activation)
         self.dense_init = get_initializer(dense_init)
         self.rec_init = get_initializer(rec_init)
-        self.embeddings = get_embeddings(embedding_matrix, embedding_train_mode, missing_indices)
 
     def apply_dropout(self, tensor):
         """Applies dropout to a tensor"""
@@ -57,6 +58,11 @@ class SNLIModel(object):
             input_keep_prob=1. - self.dropout_placeholder if on_input else 1.,
             output_keep_prob=1. - self.dropout_placeholder if on_output else 1.
         )
+
+    def embed_indices(self, indices):
+        embedded_vectors = tf.nn.embedding_lookup(self.embeddings, indices)
+        output_shape = [tf.shape(indices)[0], tf.shape(indices)[1], self._embedding_size]
+        return tf.reshape(embedded_vectors, shape=output_shape)
 
     def add_placeholders(self):
         """Adds placeholder variables to tensorflow computational graph.
