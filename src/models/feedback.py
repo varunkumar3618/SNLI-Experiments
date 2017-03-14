@@ -127,18 +127,17 @@ class FeedbackModel(SNLIModel):
             prem_embed, hyp_embed = self.embedding()
             prem_hiddens, _, hyp_hiddens, _ = self.encoding(prem_embed, hyp_embed, "encoding")
 
-            memory = None
+            memory = tf.zeros([tf.shape(prem_hiddens)[0], self._hidden_size])
             memory_cell = tf.contrib.rnn.GRUCell(self._hidden_size)
 
             with tf.variable_scope("feedback"):
                 for i in range(self._feedback_iters):
                     episode = self.episode(prem_hiddens, hyp_hiddens, memory, "attention")
+                    memory = memory_cell(episode, memory)
 
                     if i == 0:
                         memory = episode
                         tf.get_variable_scope().reuse_variables()
-                    else:
-                        memory = memory_cell(episode, memory)
 
             preds, logits = self.classification(memory)
             return preds, logits
