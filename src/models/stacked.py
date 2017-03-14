@@ -67,15 +67,14 @@ class StackedAttentionModel(SNLIModel):
     def attention(self, x, y, scope):
         with tf.variable_scope(scope):
             x_att, y_att = self.projection(x, y, "projection_att")
-            x_subj, y_subj = self.projection(x, y, "projection_subj")
 
             E = tf.exp(tf.einsum("aij,ajk->aik", x_att, tf.transpose(y_att, perm=[0, 2, 1])))
 
-            Num_beta = tf.einsum("aij,ajk->aik", E, y_subj)
+            Num_beta = tf.einsum("aij,ajk->aik", E, y)
             Den_beta = tf.reduce_sum(E, axis=2)
             beta = Num_beta / tf.expand_dims(Den_beta, axis=2)
 
-            Num_alpha = tf.einsum("aij,aik->ajk", E, x_subj)
+            Num_alpha = tf.einsum("aij,aik->ajk", E, x)
             Den_alpha = tf.reduce_sum(E, axis=1)
             alpha = Num_alpha / tf.expand_dims(Den_alpha, axis=2)
         return beta, alpha
