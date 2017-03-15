@@ -71,10 +71,10 @@ class MPMatchingModel(SNLIModel):
                 W = tf.get_variable("W", shape=[self._perspectives, self._hidden_size],
                                     initializer=self.dense_init,
                                     regularizer=reg)
-                W = tf.expand_dims(tf.expand_dims(W, axis=0), axis=0)
+                W = tf.expand_dims(tf.expand_dims(W, axis=0), axis=1)
 
-                x_pers = tf.expand_dims(x, axis=3) * W
-                y_pers = tf.expand_dims(tf.expand_dims(y, axis=1), axis=3) * W
+                x_pers = tf.expand_dims(x, axis=2) * W
+                y_pers = tf.expand_dims(tf.expand_dims(y, axis=1), axis=2) * W
 
                 x_mags = tf.sqrt(tf.reduce_sum(x_pers * x_pers, axis=3))
                 y_mags = tf.sqrt(tf.reduce_sum(y_pers * y_pers, axis=3))
