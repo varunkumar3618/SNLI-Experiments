@@ -85,6 +85,7 @@ class AttentionModel(SNLIModel):
     def classification(self, h_star):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         with tf.variable_scope("classification"):
+            h_star = self.apply_dropout(h_star)
             logits = tf.layers.dense(h_star, 3,
                                      kernel_initializer=self.dense_init,
                                      kernel_regularizer=reg,
