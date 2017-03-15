@@ -71,12 +71,10 @@ class MPMatchingModel(SNLIModel):
                 x_pers = tf.expand_dims(x, axis=2) * W
                 y_pers = tf.expand_dims(tf.expand_dims(y, axis=1), axis=2) * W
 
-                x_mags = tf.sqrt(tf.reduce_sum(x_pers * x_pers, axis=3))
-                y_mags = tf.sqrt(tf.reduce_sum(y_pers * y_pers, axis=3))
+                x_mags = tf.sqrt(tf.reduce_sum(tf.square(x_pers), axis=3))
+                y_mags = tf.sqrt(tf.reduce_sum(tf.square(y_pers), axis=3))
 
-                xy = tf.reduce_sum(x_pers * y_pers, axis=3)
-
-                match = xy / (x_mags * y_mags)
+                match = tf.reduce_sum((x_pers / x_mags) * (y_pers / y_mags), axis=3)
             return match
 
         with tf.variable_scope(scope):
