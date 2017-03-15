@@ -6,10 +6,8 @@ from nltk.tokenize import word_tokenize
 
 """
 Loads a GloVe model with pretrained word embeddings, for a given set of tokens. 
-
 For more information: http://nlp.stanford.edu/projects/glove/
 GloVe data: http://nlp.stanford.edu/data/glove.6B.zip
-
 """
 
 def get_glove_vectors(glove_file, glove_saved_file, dim, vocab, dataset_dir):
