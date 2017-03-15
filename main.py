@@ -21,16 +21,10 @@ flags.DEFINE_string("model", "SOW", "The type of model to train.")
 flags.DEFINE_string("data_dir", "data/", "The location of the data files.")
 flags.DEFINE_string("name", "model", "The name of the model, used to save logs and checkpoints.")
 flags.DEFINE_string("glove_type", "common", "The source of the Glove word vectors used: one of 'wiki' and 'common'")
-flags.DEFINE_string("embedding_train_mode", "unseen", "Which glove vectors to train, one of 'all', 'unseen' and 'none'")
 
 # Data
-flags.DEFINE_integer("max_vocab_size", 10000, "The maximum size of the vocabulary.")
 flags.DEFINE_integer("max_seq_len", 100, "The maximum length of a sentence. Sentences longer than this will be truncated.")
-
-# Word vector embeddings
-flags.DEFINE_boolean("train_unseen_vocab", True, "Whether to train word vectors for words not in GloVe")
-flags.DEFINE_boolean("update_embeddings", False, "Whether the word vectors should be updated")
-flags.DEFINE_integer("window_size", 4, "Size of window to average over if avg avg_unseen_vocab is True")
+flags.DEFINE_string("embedding_train_mode", "unseen", "Which glove vectors to train, one of 'all', 'unseen' and 'none'")
 
 # Model
 flags.DEFINE_integer("word_embed_dim", 300, "The dimension of the embedding matrix.")

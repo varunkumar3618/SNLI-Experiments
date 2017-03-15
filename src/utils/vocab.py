@@ -40,10 +40,7 @@ class Vocab(object):
                 all_words += word_tokenize(data["sentence1"].lower())
                 all_words += word_tokenize(data["sentence2"].lower())
 
-        counter = Counter(all_words)
-        count_pairs = sorted(counter.items(), key=lambda x: (-x[1], x[0]))
-
-        words, _ = list(zip(*count_pairs))
+        words = ["_PAD_", "_UNK_"] + all_words
         word_to_id = dict(zip(words, range(len(words))))
 
         vocab_size = len(word_to_id)
