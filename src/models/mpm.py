@@ -2,24 +2,6 @@ import tensorflow as tf
 
 from src.models.model import SNLIModel
 
-def cosine_matching_single(x, y, d, l, initializer, regularizer, scope):
-    with tf.variable_scope(scope):
-        W = tf.get_variable("W", shape=[l, d],
-                            initializer=initializer,
-                            regularizer=regularizer)
-        W = tf.expand_dims(tf.expand_dims(W, axis=0), axis=0)
-
-        x_pers = tf.expand_dims(x, axis=3) * W
-        y_pers = tf.expand_dims(tf.expand_dims(y, axis=1), axis=3) * W
-
-        x_mags = tf.sqrt(tf.reduce_sum(x_pers * x_pers, axis=3))
-        y_mags = tf.sqrt(tf.reduce_sum(y_pers * y_pers, axis=3))
-
-        xy = tf.reduce_sum(x_mags * y_mags, axis=3)
-
-        match = xy / (x_mags * y_mags)
-    return match
-
 def get_bilstm_finals(state):
     fw_state, bw_state = state
     return fw_state[1], bw_state[1]
@@ -84,16 +66,30 @@ class MPMatchingModel(SNLIModel):
         hyp_fw_final = tf.expand_dims(hyp_fw_final, axis=1)
         hyp_bw_final = tf.expand_dims(hyp_bw_final, axis=1)
 
-        def match_vecs(x, y, scope):
-            return cosine_matching(x, y, self._hidden_size, self._perspectives,
-                                   self.dense_init, reg, scope)
+        def cosine_matching_single(x, y, initializer, regularizer, scope):
+            with tf.variable_scope(scope):
+                W = tf.get_variable("W", shape=[self._perspectives, self._hidden_size],
+                                    initializer=self.dense_init,
+                                    regularizer=reg)
+                W = tf.expand_dims(tf.expand_dims(W, axis=0), axis=0)
+
+                x_pers = tf.expand_dims(x, axis=3) * W
+                y_pers = tf.expand_dims(tf.expand_dims(y, axis=1), axis=3) * W
+
+                x_mags = tf.sqrt(tf.reduce_sum(x_pers * x_pers, axis=3))
+                y_mags = tf.sqrt(tf.reduce_sum(y_pers * y_pers, axis=3))
+
+                xy = tf.reduce_sum(x_mags * y_mags, axis=3)
+
+                match = xy / (x_mags * y_mags)
+            return match
 
         with tf.variable_scope(scope):
             # Full matching
-            prem_fw_full_match = match_vecs(prem_fw_hiddens, hyp_fw_final, "prem_fw_full")
-            prem_bw_full_match = match_vecs(prem_bw_hiddens, hyp_bw_final, "prem_bw_full")
-            hyp_fw_full_match = match_vecs(hyp_fw_hiddens, prem_fw_final, "prem_fw_full")
-            hyp_bw_full_match = match_vecs(hyp_bw_hiddens, prem_bw_final, "prem_bw_full")
+            prem_fw_full_match = cosine_matching_single(prem_fw_hiddens, hyp_fw_final, "prem_fw_full")
+            prem_bw_full_match = cosine_matching_single(prem_bw_hiddens, hyp_bw_final, "prem_bw_full")
+            hyp_fw_full_match = cosine_matching_single(hyp_fw_hiddens, prem_fw_final, "prem_fw_full")
+            hyp_bw_full_match = cosine_matching_single(hyp_bw_hiddens, prem_bw_final, "prem_bw_full")
 
             # Max-pool matching
             # prem_fw_full_match = match_vecs(prem_fw_hiddens, hyp_fw_final, "prem_fw_full")
