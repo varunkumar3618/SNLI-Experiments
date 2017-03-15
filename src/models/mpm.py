@@ -2,15 +2,15 @@ import tensorflow as tf
 
 from src.models.model import SNLIModel
 
-def cosine_matching_single(x, y, d, l, initializer, regularizer, scope):
+def cosine_matching(x, y, d, l, initializer, regularizer, scope):
     with tf.variable_scope(scope):
-        W = tf.get_variable("W", shape=[l, d],
+        W = tf.get_variable("W", shape=[d, l],
                             initializer=initializer,
                             regularizer=regularizer)
         W = tf.expand_dims(tf.expand_dims(W, axis=0), axis=0)
 
-        x_pers = tf.expand_dims(x, axis=3) * W
-        y_pers = tf.expand_dims(tf.expand_dims(y, axis=1), axis=3) * W
+        x_pers = tf.expand_dims(x, axis=2) * W
+        x_pers = tf.expand_dims(y, axis=2) * W
 
         x_mags = tf.sqrt(tf.reduce_sum(x_pers * x_pers, axis=3))
         y_mags = tf.sqrt(tf.reduce_sum(y_pers * y_pers, axis=3))
@@ -95,18 +95,8 @@ class MPMatchingModel(SNLIModel):
             hyp_fw_full_match = match_vecs(hyp_fw_hiddens, prem_fw_final, "prem_fw_full")
             hyp_bw_full_match = match_vecs(hyp_bw_hiddens, prem_bw_final, "prem_bw_full")
 
-            # Max-pool matching
-            # prem_fw_full_match = match_vecs(prem_fw_hiddens, hyp_fw_final, "prem_fw_full")
-            # prem_bw_full_match = match_vecs(prem_bw_hiddens, hyp_bw_final, "prem_bw_full")
-            # hyp_fw_full_match = match_vecs(hyp_fw_hiddens, prem_fw_final, "prem_fw_full")
-            # hyp_bw_full_match = match_vecs(hyp_bw_hiddens, prem_bw_final, "prem_bw_full")
-
             prem_matched = tf.concat([prem_fw_full_match, prem_bw_full_match], axis=2)
             hyp_matched = tf.concat([hyp_fw_full_match, hyp_bw_full_match], axis=2)
-
-            prem_matched = self.apply_dropout(prem_matched)
-            hyp_matched = self.apply_dropout(hyp_matched)
-
         return prem_matched, hyp_matched
 
     def classification(self, h_star):
