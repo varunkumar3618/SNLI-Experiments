@@ -9,6 +9,7 @@ from src.models.attention import AttentionModel
 from src.models.wbw import WBWModel
 from src.models.mLSTM import mLSTMModel
 from src.models.chen import Chen
+from src.models.mpm import MPMatchingModel
 from src.utils.dataset import Dataset
 from src.utils.vocab import Vocab
 from src.utils.wvecs import get_glove_vectors
@@ -36,6 +37,7 @@ flags.DEFINE_float("max_grad_norm", 5., "The maxmium norm that gradients should 
 flags.DEFINE_string("activation", "tanh", "The activation to use in dense layers.")
 flags.DEFINE_string("dense_init", "xavier", "The initializer to use in dense layers.")
 flags.DEFINE_string("rec_init", "xavier", "The initializer to use in recurrent layers.")
+flags.DEFINE_integer("perspectives", 20, "The number of pespectives in multi-perspective matching layers")
 
 # Training
 flags.DEFINE_integer("batch_size", 100, "The batch size.")
@@ -44,7 +46,7 @@ flags.DEFINE_float("l2_reg", 1e-4, "The level of l2 regularization to use.")
 flags.DEFINE_float("learning_rate", 1e-3, "The learning rate.")
 
 flags.DEFINE_boolean("debug", False, "Whether to run in debug mode, i.e. use a smaller dataset and increase verbosity.")
-flags.DEFINE_string("mode", "train", "Whether to run the model in 'train,' 'dev,', 'test' or 'all' mode.")
+flags.DEFINE_string("mode", "train", "Whether to run the model in 'train,' 'dev,', or 'test' mode.")
 flags.DEFINE_boolean("save", True, "Whether to save the model.")
 
 FLAGS = flags.FLAGS
@@ -121,6 +123,9 @@ def get_model(vocab):
         return mLSTMModel(**kwargs)
     elif FLAGS.model == "CHEN":
         return Chen(**kwargs)
+    elif FLAGS.model == "MPM":
+        kwargs["perspectives"] = FLAGS.perspectives
+        return MPMatchingModel(**kwargs)
     else:
         raise ValueError("Unrecognized model: %s." % FLAGS.model)
 
@@ -201,10 +206,6 @@ def main(_):
         elif FLAGS.mode == "dev":
             test(model, dataset, "dev")
         elif FLAGS.mode == "test":
-            test(model, dataset, "test")
-        elif FLAGS.mode == "all":
-            train(model, dataset)
-            test(model, dataset, "dev")
             test(model, dataset, "test")
         else:
             raise ValueError("Unrecognized mode: %s." % FLAGS.mode)
