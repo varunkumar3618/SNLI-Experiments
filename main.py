@@ -129,7 +129,7 @@ def get_model(vocab):
         return MPMatchingModel(**kwargs)
     elif FLAGS.model == "STK":
         kwargs["perspectives"] = FLAGS.perspectives
-        return MPMStackedodel(**kwargs)
+        return MPMStackedModel(**kwargs)
     else:
         raise ValueError("Unrecognized model: %s." % FLAGS.model)
 
