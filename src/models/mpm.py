@@ -106,7 +106,7 @@ class MPMatchingModel(SNLIModel):
             prem_fw_max_match = tf.reduce_max(fw_max_match, axis=2)
             prem_bw_max_match = tf.reduce_max(bw_max_match, axis=2)
             hyp_fw_max_match = tf.reduce_max(fw_max_match, axis=1)
-            hyp_fw_max_match = tf.reduce_max(bw_max_match, axis=1)
+            hyp_bw_max_match = tf.reduce_max(bw_max_match, axis=1)
 
             prem_matches = [
                 prem_fw_full_match,
