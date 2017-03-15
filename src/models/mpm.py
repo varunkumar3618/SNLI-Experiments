@@ -83,8 +83,8 @@ class MPMatchingModel(SNLIModel):
             # Full matching
             prem_fw_full_match = cosine_matching_single(prem_fw_hiddens, hyp_fw_final, "prem_fw_full")
             prem_bw_full_match = cosine_matching_single(prem_bw_hiddens, hyp_bw_final, "prem_bw_full")
-            hyp_fw_full_match = cosine_matching_single(hyp_fw_hiddens, prem_fw_final, "prem_fw_full")
-            hyp_bw_full_match = cosine_matching_single(hyp_bw_hiddens, prem_bw_final, "prem_bw_full")
+            hyp_fw_full_match = cosine_matching_single(hyp_fw_hiddens, prem_fw_final, "hyp_fw_full")
+            hyp_bw_full_match = cosine_matching_single(hyp_bw_hiddens, prem_bw_final, "hyp_bw_full")
 
             # Max-pool matching
             # prem_fw_full_match = match_vecs(prem_fw_hiddens, hyp_fw_final, "prem_fw_full")
