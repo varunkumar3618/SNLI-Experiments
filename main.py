@@ -10,6 +10,7 @@ from src.models.wbw import WBWModel
 from src.models.mLSTM import mLSTMModel
 from src.models.chen import Chen
 from src.models.mpm import MPMatchingModel
+from src.models.stacked import MPMStackedModel
 from src.utils.dataset import Dataset
 from src.utils.vocab import Vocab
 from src.utils.wvecs import get_glove_vectors
@@ -126,6 +127,9 @@ def get_model(vocab):
     elif FLAGS.model == "MPM":
         kwargs["perspectives"] = FLAGS.perspectives
         return MPMatchingModel(**kwargs)
+    elif FLAGS.model == "STK":
+        kwargs["perspectives"] = FLAGS.perspectives
+        return MPMStackedodel(**kwargs)
     else:
         raise ValueError("Unrecognized model: %s." % FLAGS.model)
 
