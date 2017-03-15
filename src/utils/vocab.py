@@ -16,11 +16,9 @@ class Vocab(object):
         self.UNK_ID = 1
         self.seq = 2
 
-        if os.path.isfile(vocab_file):
-            self.load_vocab_from_file(vocab_file)
-        else:
+        if not os.path.isfile(vocab_file):
             self.create_vocab(snli_dir, vocab_file)
-            self.load_vocab_from_file(vocab_file)
+        self.load_vocab_from_file(vocab_file)
 
     def load_vocab_from_file(self, vocab_file):
         for i, line in enumerate(open(vocab_file, "r")):
@@ -44,6 +42,7 @@ class Vocab(object):
         count_pairs = sorted(counter.items(), key=lambda x: (-x[1], x[0]))
 
         words, _ = list(zip(*count_pairs))
+        words = ["_PAD_"] + list(words)
         word_to_id = dict(zip(words, range(len(words))))
 
         vocab_size = len(word_to_id)
@@ -54,7 +53,7 @@ class Vocab(object):
         print("vocab of size {} written to {}".format(vocab_size, vocab_path))
 
     def size(self):
-        return len(self.token_id) + 2  # +1 for UNK & PAD
+        return len(self.token_id) + 1
 
     def id_for_token(self, token):
         return self.token_id[token]
