@@ -51,12 +51,8 @@ FLAGS = flags.FLAGS
 
 snli_dir = os.path.join(FLAGS.data_dir, "snli_1.0")
 vocab_file = os.path.join(FLAGS.data_dir, "vocab.txt")
-glove_saved_file = os.path.join(FLAGS.data_dir, "glove_saved_%s_%s.npy" % (FLAGS.glove_type, FLAGS.word_embed_dim))
 regular_data_file = os.path.join(FLAGS.data_dir, "data.pkl")
 debug_data_file = os.path.join(FLAGS.data_dir, "debug_data.pkl")
-
-if FLAGS.word_embed_dim != 300:
-    FLAGS.glove_type = "wiki"
 
 base_models_dir = os.path.join(FLAGS.data_dir, "models")
 model_dir = os.path.join(base_models_dir, FLAGS.name)
@@ -77,11 +73,15 @@ if not os.path.isdir(train_log_dir):
     os.mkdir(train_log_dir)
 
 if FLAGS.glove_type == "wiki":
-    glove_file = os.path.join(os.path.join(FLAGS.data_dir, "glove.6B"), "glove.6B.%sd.txt" % FLAGS.word_embed_dim)
+    glove_folder = os.path.join(FLAGS.data_dir, "glove.6B")
+    glove_file = os.path.join(glove_folder, "glove.6B.%sd.txt" % FLAGS.word_embed_dim)
+    glove_saved_file = os.path.join(glove_folder, "glove.6B.%sd.npy" % FLAGS.word_embed_dim)
 elif FLAGS.glove_type == "common":
     if FLAGS.word_embed_dim != 300:
         raise ValueError("Common Crawl word vectors are only available with dimension 300.")
-    glove_file = os.path.join(os.path.join(FLAGS.data_dir, "glove.840B.300d"), "glove.840B.300d.txt")
+    glove_folder = os.path.join(FLAGS.data_dir, "glove.840B.300d")
+    glove_file = os.path.join(glove_folder, "glove.840B.300d.txt")
+    glove_saved_file = os.path.join(glove_folder, "glove.840B.300d.npy")
 else:
     raise ValueError("Unrecognized word vector type: %s." % FLAGS.glove_type)
 
@@ -89,7 +89,7 @@ def get_model(vocab):
     print "Embedding matrix"
     snli_dir = os.path.join(FLAGS.data_dir, "snli_1.0")
     embedding_matrix, missing_indices\
-            = get_glove_vectors(glove_file, glove_saved_file, FLAGS.word_embed_dim, vocab, snli_dir)
+            = get_glove_vectors(glove_file, glove_saved_file, FLAGS.word_embed_dim, vocab)
 
     kwargs = {
         "embedding_matrix": embedding_matrix,

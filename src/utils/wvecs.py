@@ -10,7 +10,7 @@ For more information: http://nlp.stanford.edu/projects/glove/
 GloVe data: http://nlp.stanford.edu/data/glove.6B.zip
 """
 
-def get_glove_vectors(glove_file, glove_saved_file, dim, vocab, dataset_dir):
+def get_glove_vectors(glove_file, glove_saved_file, dim, vocab):
     if os.path.isfile(glove_saved_file):
         with open(glove_saved_file, "r") as glove_saved:
             npzfile = np.load(glove_saved)
@@ -19,8 +19,7 @@ def get_glove_vectors(glove_file, glove_saved_file, dim, vocab, dataset_dir):
         return matrix, missing_indices
 
     matrix = np.zeros([vocab.size(), dim])
-    missing_indices = set([x for x in xrange(vocab.size())])
-    found_set = set()
+    missing_indices = set([x for x in xrange(1, vocab.size())])
 
     with open(glove_file) as ifs:
         for line in ifs:
@@ -37,13 +36,8 @@ def get_glove_vectors(glove_file, glove_saved_file, dim, vocab, dataset_dir):
             index = vocab.id_for_token(token)
             matrix[index] = np.asarray(data)
             missing_indices.remove(index)
-            found_set.add(token)
-    
-    print "0, 1 in missing", (0 in missing_indices), (1 in missing_indices)
-    matrix[0] = 0
-    matrix[1] = 0
-    print "WARNING: %s tokens were not found in the Glove file. Their embeddings will be set to zero."\
-        % (len(vocab.token_id.keys()) - len(found_set))
+
+    print "WARNING: %s tokens were not found in the Glove file." % (len(missing_indices))
 
     with open(glove_saved_file, "w") as out:
         np.savez(out, matrix=matrix, missing_indices=list(missing_indices))
