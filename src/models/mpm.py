@@ -90,7 +90,7 @@ class MPMatchingModel(SNLIModel):
                 x_pers_norm = tf.nn.l2_normalize(x_pers, 3)
                 y_pers_norm = tf.nn.l2_normalize(y_pers, 3)
 
-                match = tf.einsum("aikl,ajkl->aijk")
+                match = tf.einsum("aikl,ajkl->aijk", x_pers_norm, y_pers_norm)
             return match
 
         with tf.variable_scope(scope):
