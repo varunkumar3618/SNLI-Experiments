@@ -7,7 +7,7 @@ from nltk.tokenize import word_tokenize
 
 class Vocab(object):
 
-    def __init__(self, snli_dir, vocab_file, max_vocab_size, use_all=True):
+    def __init__(self, snli_dir, vocab_file, max_vocab_size=10000, use_all=True):
         self.vocab_file = vocab_file
         self.max_vocab_size = max_vocab_size
         self.use_all = use_all
