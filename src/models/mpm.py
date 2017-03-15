@@ -61,11 +61,6 @@ class MPMatchingModel(SNLIModel):
         prem_fw_final, prem_bw_final = get_bilstm_finals(prem_final_state)
         hyp_fw_final, hyp_bw_final = get_bilstm_finals(hyp_final_state)
 
-        prem_fw_final = tf.expand_dims(prem_fw_final, axis=1)
-        prem_bw_final = tf.expand_dims(prem_bw_final, axis=1)
-        hyp_fw_final = tf.expand_dims(hyp_fw_final, axis=1)
-        hyp_bw_final = tf.expand_dims(hyp_bw_final, axis=1)
-
         def cosine_matching_single(x, y, scope):
             with tf.variable_scope(scope):
                 W = tf.get_variable("W", shape=[self._perspectives, self._hidden_size],
