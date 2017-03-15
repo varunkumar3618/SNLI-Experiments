@@ -114,7 +114,7 @@ class MPMatchingModel(SNLIModel):
                 hyp_max_match = tf.reduce_max(all_max_match, axis=1)
 
                 # Attentive matching
-                alpha_exp = tf.exp(cosine_complex(prem_hiddens, hyp_hiddens, 3, "aikl,ajkl->aijk"))
+                alpha_exp = tf.exp(cosine_complex(prem_hiddens, hyp_hiddens, 2, "aikl,ajkl->aijk"))
 
                 prem_weights = alpha_exp / (1e-8 + tf.expand_dims(tf.reduce_sum(alpha_exp, axis=2), axis=2))
                 prem_means = tf.reduce_sum(tf.expand_dims(hyp_hiddens, axis=1) * tf.expand_dims(prem_weights, 4), axis=2)
