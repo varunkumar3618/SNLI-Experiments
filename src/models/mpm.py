@@ -111,7 +111,7 @@ class MPMatchingModel(SNLIModel):
                 # Max-pool matching
                 all_max_match = cosine_matching_all(prem_hiddens, hyp_hiddens, "all_max")
                 prem_max_match = tf.reduce_max(all_max_match, axis=2)
-                hyp_max_match = tf.reduce_max(hyp_max_match, axis=1)
+                hyp_max_match = tf.reduce_max(all_max_match, axis=1)
 
                 # Attentive matching
                 alpha_exp = tf.exp(cosine_complex(prem_hiddens, hyp_hiddens, 3, "aikl,ajkl->aijk"))
