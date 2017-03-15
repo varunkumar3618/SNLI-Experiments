@@ -61,6 +61,21 @@ class MPMatchingModel(SNLIModel):
         prem_fw_final, prem_bw_final = get_bilstm_finals(prem_final_state)
         hyp_fw_final, hyp_bw_final = get_bilstm_finals(hyp_final_state)
 
+        prem_fw_final = tf.expand_dims(prem_fw_final, axis=1)
+        prem_bw_final = tf.expand_dims(prem_bw_final, axis=1)
+        hyp_fw_final = tf.expand_dims(hyp_fw_final, axis=1)
+        hyp_bw_final = tf.expand_dims(hyp_bw_final, axis=1)
+
+        def cosine_single(x, y, axis):
+            x = tf.nn.l2_normalize(x, axis)
+            y = tf.nn.l2_normalize(y, axis)
+            return tf.reduce_sum(x * y, axis=axis)
+
+        def cosine_complex(x, y, axis, formula):
+            x = tf.nn.l2_normalize(x, axis)
+            y = tf.nn.l2_normalize(y, axis)
+            return tf.einsum(formula, x, y)
+
         def cosine_matching_single(x, y, scope):
             with tf.variable_scope(scope):
                 W = tf.get_variable("W", shape=[self._perspectives, self._hidden_size],
@@ -69,12 +84,9 @@ class MPMatchingModel(SNLIModel):
                 W = tf.expand_dims(tf.expand_dims(W, axis=0), axis=1)
 
                 x_pers = tf.expand_dims(x, axis=2) * W
-                y_pers = tf.expand_dims(tf.expand_dims(y, axis=1), axis=2) * W
+                y_pers =tf.expand_dims(y, axis=2) * W
 
-                x_pers_norm = tf.nn.l2_normalize(x_pers, 3)
-                y_pers_norm = tf.nn.l2_normalize(y_pers, 3)
-
-                match = tf.reduce_sum(x_pers_norm * y_pers_norm, axis=3)
+                match = cosine_single(x_pers, y_pers, axis=3)
 
             return match
 
@@ -87,40 +99,51 @@ class MPMatchingModel(SNLIModel):
                 x_pers = tf.expand_dims(x, axis=2) * W
                 y_pers = tf.expand_dims(y, axis=2) * W
 
-                x_pers_norm = tf.nn.l2_normalize(x_pers, 3)
-                y_pers_norm = tf.nn.l2_normalize(y_pers, 3)
-
-                match = tf.einsum("aikl,ajkl->aijk", x_pers_norm, y_pers_norm)
+                match = cosine_complex(x_pers, y_pers, 3, "aikl,ajkl->aijk")
             return match
 
-        with tf.variable_scope(scope):
-            # Full matching
-            prem_fw_full_match = cosine_matching_single(prem_fw_hiddens, hyp_fw_final, "prem_fw_full")
-            prem_bw_full_match = cosine_matching_single(prem_bw_hiddens, hyp_bw_final, "prem_bw_full")
-            hyp_fw_full_match = cosine_matching_single(hyp_fw_hiddens, prem_fw_final, "hyp_fw_full")
-            hyp_bw_full_match = cosine_matching_single(hyp_bw_hiddens, prem_bw_final, "hyp_bw_full")
+        def all_matchings(prem_hiddens, prem_final, hyp_hiddens, hyp_final, scope):
+            with tf.variable_scope(scope):
+                # Full matching
+                prem_full_match = cosine_matching_single(prem_hiddens, hyp_final, "prem_full")
+                hyp_full_match = cosine_matching_single(hyp_hiddens, prem_final, "hyp_full")
 
-            # Max-pool matching
-            fw_max_match = cosine_matching_all(prem_fw_hiddens, hyp_fw_hiddens, "fw_max")
-            bw_max_match = cosine_matching_all(prem_bw_hiddens, hyp_bw_hiddens, "bw_max")
-            prem_fw_max_match = tf.reduce_max(fw_max_match, axis=2)
-            prem_bw_max_match = tf.reduce_max(bw_max_match, axis=2)
-            hyp_fw_max_match = tf.reduce_max(fw_max_match, axis=1)
-            hyp_bw_max_match = tf.reduce_max(bw_max_match, axis=1)
+                # Max-pool matching
+                all_max_match = cosine_matching_all(prem_hiddens, hyp_hiddens, "all_max")
+                prem_max_match = tf.reduce_max(all_max_match, axis=2)
+                hyp_max_match = tf.reduce_max(hyp_max_match, axis=1)
+
+                # Attentive matching
+                alpha_exp = tf.exp(cosine_complex(prem_hiddens, hyp_hiddens, 3, "aikl,ajkl->aijk"))
+
+                prem_weights = alpha_exp / (1e-8 + tf.expand_dims(tf.reduce_sum(alpha_exp, axis=2), axis=2))
+                prem_means = tf.reduce_sum(tf.expand_dims(hyp_hiddens, axis=1) * tf.expand_dims(prem_weights, 4), axis=2)
+                prem_att_match = cosine_matching_single(prem_hiddens, prem_means, "prem_att")
+
+                hyp_weights = alpha_exp / (1e-8 + tf.expand_dims(tf.reduce_sum(alpha_exp, axis=1), axis=1))
+                hyp_means = tf.reduce_sum(tf.expand_dims(prem_hiddens, axis=2) * tf.expand_dims(hyp_weights, 4), axis=1)
+                hyp_att_match = cosine_matching_single(hyp_hiddens, hyp_means, "hyp_att")
 
             prem_matches = [
-                prem_fw_full_match,
-                prem_bw_full_match,
-                prem_fw_max_match,
-                prem_bw_max_match
+                prem_full_match,
+                prem_max_match
             ]
             hyp_matches = [
-                hyp_fw_full_match,
-                hyp_bw_full_match,
-                hyp_fw_max_match,
-                hyp_bw_max_match
+                hyp_full_match,
+                hyp_max_match
             ]
+            return prem_matches, hyp_matches
 
+
+        with tf.variable_scope(scope):
+            prem_fw_matches, hyp_fw_matches = all_matchings(prem_fw_hiddens, prem_fw_final,
+                                                            hyp_fw_hiddens, hyp_fw_final,
+                                                            "forward")
+            prem_bw_matches, hyp_bw_matches = all_matchings(prem_bw_hiddens, prem_bw_final,
+                                                            hyp_bw_hiddens, hyp_bw_final,
+                                                            "backward")
+            prem_matches = prem_fw_matches + prem_bw_matches
+            hyp_matches = hyp_fw_matches + hyp_bw_matches
             prem_matched = tf.concat(prem_matches, axis=2)
             hyp_matched = tf.concat(hyp_matches, axis=2)
 
