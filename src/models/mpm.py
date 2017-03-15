@@ -74,7 +74,10 @@ class MPMatchingModel(SNLIModel):
                 x_mags = tf.sqrt(tf.reduce_sum(tf.square(x_pers), axis=3))
                 y_mags = tf.sqrt(tf.reduce_sum(tf.square(y_pers), axis=3))
 
-                match = tf.reduce_sum((x_pers / x_mags) * (y_pers / y_mags), axis=3)
+                x_pers_norm = x_pers / tf.expand_dims(x_mags, axis=3)
+                y_pers_norm = y_pers / tf.expand_dims(y_pers, axis=3)
+
+                match = tf.tensordot(x_pers_norm, y_pers_norm, axes=[[3], [3]])
             return match
 
         with tf.variable_scope(scope):
