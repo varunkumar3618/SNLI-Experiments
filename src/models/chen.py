@@ -43,11 +43,13 @@ class Chen(SNLIModel):
                 use_peepholes=self._use_peepholes,
                 initializer=self.rec_init
             )
+            fw_cell = self.apply_dropout_wrapper(fw_cell)
             bw_cell = tf.contrib.rnn.LSTMCell(
                 self._hidden_size,
                 use_peepholes=self._use_peepholes,
                 initializer=self.rec_init
             )
+            bw_cell = self.apply_dropout_wrapper(bw_cell)
             with tf.variable_scope("prem_encoder"):
                 (prem_fw_hiddens, prem_bw_hiddens), prem_final_state\
                     = tf.nn.bidirectional_dynamic_rnn(fw_cell, bw_cell, prem, dtype=tf.float32,

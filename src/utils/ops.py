@@ -25,3 +25,8 @@ def get_embeddings(embedding_matrix, embedding_mode, missing_indices):
         missing = tf.expand_dims(tf.constant(missing_one_hot, dtype=tf.float32), axis=1)
 
         return original_embeddings * (1 - missing) + new_embeddings * missing
+
+def cosine(x, y):
+    x_mag = tf.sqrt(tf.tensordot(x, x, axes=1))
+    y_mag = tf.sqrt(tf.tensordot(y, y, axes=1))
+    return tf.tensordot(x, y, axes=1) / (X_mag * y_mag)
