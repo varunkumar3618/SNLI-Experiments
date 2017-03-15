@@ -26,7 +26,7 @@ flags.DEFINE_string("split", "dev", "The split to analyze.")
 flags.DEFINE_string("analysis_path", "", "Where to save the analysis.")
 
 FLAGS = flags.FLAGS
-if len(FLAGS.analysis_path) == 0 or len(FLAGS.analysis_type) == 0: 
+if len(FLAGS.analysis_path) == 0 or len(FLAGS.analysis_type) == 0:
     raise ValueError("The analysis type and the analysis path must both be supplied.")
 
 snli_dir = os.path.join(FLAGS.data_dir, "snli_1.0")
@@ -67,15 +67,26 @@ def error_report(vocab, dataset):
     sentence2s = dataset.get_sentence2(FLAGS.split)
     predicted_labels = np.load(os.path.join(results_dir, "predictions_%s.npy" % FLAGS.split))
 
+    total_correct = np.zeros(3)  # index represents the label
+    total = np.zeros(3)
+
     with open(FLAGS.analysis_path, "wb") as outf:
         for i, (true_label, sentence1, sentence2, predicted_label)\
                 in enumerate(zip(true_labels, sentence1s, sentence2s, predicted_labels)):
+            total_correct[true_label] += true_label == predicted_label
+            total[true_label] += 1.0
             outf.write("%s)\n" % i)
             outf.write("Sentence1: %s\n" % sentence1)
             outf.write("Sentence2: %s\n" % sentence2)
             outf.write("True label: %s\n" % dataset.int_to_label(true_label))
             outf.write("Predicted label: %s\n" % dataset.int_to_label(predicted_label))
             outf.write("\n")
+
+        # Record class-wise accuracy results
+        accuracy = total_correct / total
+        outf.write("Total accuracy by class:\n")
+        for i in range(3):
+            outf.write("%s: %.2f\n" % (dataset.int_to_label(i), accuracy[i]))
 
 def main(_):
     vocab = Vocab(snli_dir, vocab_file)
