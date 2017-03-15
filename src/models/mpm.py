@@ -117,11 +117,11 @@ class MPMatchingModel(SNLIModel):
                 alpha_exp = tf.exp(cosine_complex(prem_hiddens, hyp_hiddens, 2, "aik,ajk->aij"))
 
                 prem_weights = alpha_exp / (1e-8 + tf.expand_dims(tf.reduce_sum(alpha_exp, axis=2), axis=2))
-                prem_means = tf.reduce_sum(tf.expand_dims(hyp_hiddens, axis=1) * tf.expand_dims(prem_weights, 4), axis=2)
+                prem_means = tf.reduce_sum(tf.expand_dims(hyp_hiddens, axis=1) * tf.expand_dims(prem_weights, 3), axis=2)
                 prem_att_match = cosine_matching_single(prem_hiddens, prem_means, "prem_att")
 
                 hyp_weights = alpha_exp / (1e-8 + tf.expand_dims(tf.reduce_sum(alpha_exp, axis=1), axis=1))
-                hyp_means = tf.reduce_sum(tf.expand_dims(prem_hiddens, axis=2) * tf.expand_dims(hyp_weights, 4), axis=1)
+                hyp_means = tf.reduce_sum(tf.expand_dims(prem_hiddens, axis=2) * tf.expand_dims(hyp_weights, 3), axis=1)
                 hyp_att_match = cosine_matching_single(hyp_hiddens, hyp_means, "hyp_att")
 
             prem_matches = [
