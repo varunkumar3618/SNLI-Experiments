@@ -71,8 +71,8 @@ class MPMatchingModel(SNLIModel):
                 x_pers = tf.expand_dims(x, axis=2) * W
                 y_pers = tf.expand_dims(tf.expand_dims(y, axis=1), axis=2) * W
 
-                x_pers_norm = tf.nn.l2_normalize(x_pers_norm, 3)
-                y_pers = tf.nn.l2_normalize(y_pers_norm, 3)
+                x_pers_norm = tf.nn.l2_normalize(x_pers, 3)
+                y_pers_norm = tf.nn.l2_normalize(y_pers, 3)
 
                 match = tf.reduce_sum(x_pers_norm * y_pers_norm, axis=3)
             return match
