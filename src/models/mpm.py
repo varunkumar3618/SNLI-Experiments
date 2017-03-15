@@ -75,6 +75,22 @@ class MPMatchingModel(SNLIModel):
                 y_pers_norm = tf.nn.l2_normalize(y_pers, 3)
 
                 match = tf.reduce_sum(x_pers_norm * y_pers_norm, axis=3)
+
+            return match
+
+        def cosine_matching_all(x, y, scope):
+            with tf.variable_scope(scope):
+                W = tf.get_variable("W", shape=[self._perspectives, self._hidden_size],
+                                    initializer=self.dense_init,
+                                    regularizer=reg)
+
+                x_pers = tf.expand_dims(x, axis=2) * W
+                y_pers = tf.expand_dims(y, axis=2) * W
+
+                x_pers_norm = tf.nn.l2_normalize(x_pers, 3)
+                y_pers_norm = tf.nn.l2_normalize(y_pers, 3)
+
+                match = tf.einsum("aikl,ajkl->aijk")
             return match
 
         with tf.variable_scope(scope):
@@ -85,13 +101,28 @@ class MPMatchingModel(SNLIModel):
             hyp_bw_full_match = cosine_matching_single(hyp_bw_hiddens, prem_bw_final, "hyp_bw_full")
 
             # Max-pool matching
-            # prem_fw_full_match = match_vecs(prem_fw_hiddens, hyp_fw_final, "prem_fw_full")
-            # prem_bw_full_match = match_vecs(prem_bw_hiddens, hyp_bw_final, "prem_bw_full")
-            # hyp_fw_full_match = match_vecs(hyp_fw_hiddens, prem_fw_final, "prem_fw_full")
-            # hyp_bw_full_match = match_vecs(hyp_bw_hiddens, prem_bw_final, "prem_bw_full")
+            fw_max_match = cosine_matching_all(prem_fw_hiddens, hyp_fw_hiddens, "fw_max")
+            bw_max_match = cosine_matching_all(prem_bw_hiddens, hyp_bw_hiddens, "bw_max")
+            prem_fw_max_match = tf.reduce_max(fw_max_match, axis=2)
+            prem_bw_max_match = tf.reduce_max(bw_max_match, axis=2)
+            hyp_fw_max_match = tf.reduce_max(fw_max_match, axis=1)
+            hyp_fw_max_match = tf.reduce_max(bw_max_match, axis=1)
 
-            prem_matched = tf.concat([prem_fw_full_match, prem_bw_full_match], axis=2)
-            hyp_matched = tf.concat([hyp_fw_full_match, hyp_bw_full_match], axis=2)
+            prem_matches = [
+                prem_fw_full_match,
+                prem_bw_full_match,
+                prem_fw_max_match,
+                prem_bw_max_match
+            ]
+            hyp_matches = [
+                hyp_fw_full_match,
+                hyp_bw_full_match,
+                hyp_fw_max_match,
+                hyp_bw_max_match
+            ]
+
+            prem_matched = tf.concat(prem_matches, axis=2)
+            hyp_matched = tf.concat(hyp_matches, axis=2)
 
             prem_matched = self.apply_dropout(prem_matched)
             hyp_matched = self.apply_dropout(hyp_matched)
