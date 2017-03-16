@@ -9,6 +9,7 @@ from src.models.attention import AttentionModel
 from src.models.wbw import WBWModel
 from src.models.mLSTM import mLSTMModel
 from src.models.chen import Chen
+from src.models.schen import SChen
 from src.models.mpm import MPMatchingModel
 from src.utils.dataset import Dataset
 from src.utils.vocab import Vocab
@@ -123,6 +124,8 @@ def get_model(vocab):
         return mLSTMModel(**kwargs)
     elif FLAGS.model == "CHEN":
         return Chen(**kwargs)
+    elif FLAGS.model == "SCHEN":
+        return SChen(**kwargs)
     elif FLAGS.model == "MPM":
         kwargs["perspectives"] = FLAGS.perspectives
         return MPMatchingModel(**kwargs)
