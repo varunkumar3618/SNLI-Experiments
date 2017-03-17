@@ -64,56 +64,21 @@ class mLSTMCell(tf.contrib.rnn.RNNCell):
             # Now, implement an LSTM, where the input to the LSTM is m_k = [a_k, inputs]
             m_k = tf.concat([r_subject, inputs], axis=1, name="m_k")
             full_inputs = tf.concat([m_k, hidden], axis=1, name="full_inputs")
-            # input_1 = tf.layers.dense(m_k, self._hidden_size,
-            #                          kernel_initializer=self._initializer,
-            #                          kernel_regularizer=self._regularizer,
-            #                          name="input_1")
-            # input_2 = tf.layers.dense(hidden, self._hidden_size,
-            #                          kernel_initializer=self._initializer,
-            #                          kernel_regularizer=self._regularizer,
-            #                          name="input_2")
-            # input_gate = tf.tanh(input_1 + input_2, name="input_gate")
             input_gate = tf.layers.dense(full_inputs, self._hidden_size, 
                                        kernel_initializer=self._initializer, 
                                        kernel_regularizer=self._regularizer, 
-                                       activation=tf.tanh, name="input_gate")
+                                       activation=tf.sigmoid, name="input_gate")
 
-            # forget_1 = tf.layers.dense(m_k, self._hidden_size,
-            #                          kernel_initializer=self._initializer,
-            #                          kernel_regularizer=self._regularizer,
-            #                          name="forget_1")
-            # forget_2 = tf.layers.dense(hidden, self._hidden_size,
-            #                          kernel_initializer=self._initializer,
-            #                          kernel_regularizer=self._regularizer,
-            #                          name="forget_2")
-            # forget_gate = tf.tanh(forget_1 + forget_2, name="forget_gate")
             forget_gate = tf.layers.dense(full_inputs, self._hidden_size, 
                                        kernel_initializer=self._initializer, 
                                        kernel_regularizer=self._regularizer, 
-                                       activation=tf.tanh, name="forget_gate")
+                                       activation=tf.sigmoid, name="forget_gate")
 
-            # output_1 = tf.layers.dense(m_k, self._hidden_size,
-            #                          kernel_initializer=self._initializer,
-            #                          kernel_regularizer=self._regularizer,
-            #                          name="output_1")
-            # output_2 = tf.layers.dense(hidden, self._hidden_size,
-            #                          kernel_initializer=self._initializer,
-            #                          kernel_regularizer=self._regularizer,
-            #                          name="output_2")
-            # output_gate = tf.tanh(output_1 + output_2, name="output_gate")
             output_gate = tf.layers.dense(full_inputs, self._hidden_size, 
                                        kernel_initializer=self._initializer, 
                                        kernel_regularizer=self._regularizer, 
-                                       activation=tf.tanh, name="output_gate")
+                                       activation=tf.sigmoid, name="output_gate")
 
-            # intermediate_1 = tf.layers.dense(m_k, self._hidden_size,
-            #                          kernel_initializer=self._initializer,
-            #                          kernel_regularizer=self._regularizer,
-            #                          name="intermediate_1")
-            # intermediate_2 = tf.layers.dense(hidden, self._hidden_size,
-            #                          kernel_initializer=self._initializer,
-            #                          kernel_regularizer=self._regularizer,
-            #                          name="intermediate_2")
             intermediate = tf.layers.dense(full_inputs, self._hidden_size, 
                                        kernel_initializer=self._initializer, 
                                        kernel_regularizer=self._regularizer, 
