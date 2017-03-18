@@ -10,7 +10,9 @@ class mLSTMCell(tf.contrib.rnn.RNNCell):
     def __init__(self, hidden_size, subject, initializer, regularizer):
         self._state_size = 2*hidden_size
         self._hidden_size = hidden_size
-        self._subject = subject
+
+        zeros = tf.zeros([tf.shape(subject)[0], 1, self._hidden_size])
+        self._subject = tf.concat([zeros, subject], axis=1)
         self._initializer = initializer
         self._regularizer = regularizer
 

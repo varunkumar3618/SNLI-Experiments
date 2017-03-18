@@ -58,7 +58,10 @@ class AttentionModel(SNLIModel):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         hyp_final_hidden = hyp_final_state[1]
         with tf.variable_scope("attention"):
-            M_prem = tf.layers.dense(prem_hiddens, self._hidden_size,
+            zeros = tf.zeros([tf.shape(prem_hiddens)[0], 1, self._hidden_size])
+            subject = tf.concat([zeros, prem_hiddens], axis=1)
+
+            M_prem = tf.layers.dense(subject, self._hidden_size,
                                      kernel_initializer=self.dense_init,
                                      kernel_regularizer=reg,
                                      name="M_prem")
@@ -73,7 +76,8 @@ class AttentionModel(SNLIModel):
             A = tf.squeeze(A, axis=2)
             alpha = tf.nn.softmax(A)
 
-            r = tf.reduce_sum(prem_hiddens * tf.expand_dims(alpha, axis=2), axis=1)
+            np.save(alpha, sess.)
+            r = tf.reduce_sum(subject * tf.expand_dims(alpha, axis=2), axis=1)
 
             h_star = tf.layers.dense(tf.concat([r, hyp_final_hidden], 1), self._hidden_size,
                                      kernel_initializer=self.dense_init,
