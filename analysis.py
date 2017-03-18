@@ -11,11 +11,23 @@ import sklearn.metrics
 from src.utils.dataset import Dataset
 from src.utils.vocab import Vocab
 
+"""
+Script for performing data analysis of model results. Example invocations:
+
+1) Confusion: Writes out a confusion matrix jpg.
+    python analysis.py --name=MyModel --analysis_type=confusion --analysis_path=path/to/file
+2) Error: Writes out the incorrect predictions and the overall accuracy per class.
+    python analysis.py --name=MyModel --analysis_type=error --analysis_path=path/to/file
+3) Diff: Writes out the disagreeing labels between the two models and the overall accuracy per class per model.
+    python analysis.py --name=MyFirstModel --alt_name=MySecondModel --analysis_type=diff --analysis_path=path/to/file
+"""
+
 flags = tf.app.flags
 
 # File paths
 flags.DEFINE_string("data_dir", "data/", "The location of the data files.")
 flags.DEFINE_string("name", "model", "The name of the model, used to save logs and checkpoints.")
+flags.DEFINE_string("alt_name", "model", "The name of the alternate second model, i.e. for diff mode.")
 
 # Data
 flags.DEFINE_integer("max_seq_len", 100, "The maximum length of a sentence. Sentences longer than this will be truncated.")
@@ -86,7 +98,54 @@ def error_report(vocab, dataset):
         accuracy = total_correct / total
         outf.write("Total accuracy by class:\n")
         for i in range(3):
-            outf.write("%s: %.2f\n" % (dataset.int_to_label(i), accuracy[i]))
+            outf.write("%s: %.2f (%s/%s)\n" % (dataset.int_to_label(i), model_accuracy[i], total_correct[i], total[i]))
+
+def diff_models(vocab, dataset):
+    true_labels = dataset.get_true_labels(FLAGS.split)
+    sentence1s = dataset.get_sentence1(FLAGS.split)
+    sentence2s = dataset.get_sentence2(FLAGS.split)
+
+    # Gather alternate model information
+    alt_model_dir = os.path.join(base_models_dir, FLAGS.alt_name)
+    alt_checkpoint_dir = os.path.join(alt_model_dir, "checkpoint")
+    alt_checkpoint_path = os.path.join(alt_checkpoint_dir, "model.ckpt")
+    alt_results_dir = os.path.join(alt_model_dir, "results")
+
+    predicted_labels = np.load(os.path.join(results_dir, "predictions_%s.npy" % FLAGS.split))
+    alt_predicted_labels = np.load(os.path.join(alt_results_dir, "predictions_%s.npy" % FLAGS.split))
+    primary_model_correct = np.zeros(3)
+    alt_model_correct = np.zeros(3)
+    total = np.zeros(3)
+
+    with open(FLAGS.analysis_path, "wb") as outf:
+        for i, (true_label, sentence1, sentence2, predicted_label, alt_predicted_label)\
+                in enumerate(zip(true_labels, sentence1s, sentence2s, predicted_labels, alt_predicted_labels)):
+
+            # Collect error summary
+            primary_model_correct[true_label] += true_label == predicted_label
+            alt_model_correct[true_label] += true_label == alt_predicted_label
+            total[true_label] += 1.0
+
+            # Output when the two models disagree
+            if predicted_label != alt_predicted_label:
+                outf.write("%s)\n" % i)
+                outf.write("Sentence1: %s\n" % sentence1)
+                outf.write("Sentence2: %s\n" % sentence2)
+                outf.write("True label: %s\n" % dataset.int_to_label(true_label))
+                outf.write("Model %s predicted label: %s\n" % (FLAGS.name,dataset.int_to_label(predicted_label)))
+                outf.write("Model %s predicted label: %s\n" % (FLAGS.alt_name, dataset.int_to_label(alt_predicted_label)))
+                outf.write("\n")
+
+        model_accuracy = primary_model_correct / total
+        alt_model_accuracy = alt_model_correct / total
+
+        outf.write("Total accuracy by class for model %s:\n" % FLAGS.name)
+        for i in range(3):
+            outf.write("%s: %.2f (%s/%s)\n" % (dataset.int_to_label(i), model_accuracy[i], primary_model_correct[i], total[i]))
+        outf.write("\nTotal accuracy by class for model %s:\n" % FLAGS.alt_name)
+        for i in range(3):
+            outf.write("%s: %.2f (%s/%s)\n" % (dataset.int_to_label(i), alt_model_accuracy[i], alt_model_correct[i], total[i]))
+
 
 def main(_):
     vocab = Vocab(snli_dir, vocab_file)
@@ -97,6 +156,8 @@ def main(_):
         confusion(vocab, dataset)
     elif FLAGS.analysis_type == "error_report":
         error_report(vocab, dataset)
+    elif FLAGS.analysis_type == "diff":
+        diff_models(vocab, dataset)
     else:
         raise ValueError("Unrecognized analysis: %s" % FLAGS.analysis_type)
 
