@@ -11,7 +11,7 @@ class mLSTMCell(tf.contrib.rnn.RNNCell):
         self._state_size = 2*hidden_size
         self._hidden_size = hidden_size
 
-        zeros = tf.zeros([tf.shape(subject)[0], 1, self._hidden_size])
+        zeros = tf.constant(tf.zeros([tf.shape(subject)[0], 1, self._hidden_size]))
         self._subject = tf.concat([zeros, subject], axis=1)
         self._initializer = initializer
         self._regularizer = regularizer
@@ -105,7 +105,7 @@ class mLSTMModel(AttentionModel):
             )
             with tf.variable_scope("attention"):
                 _, final_output = tf.nn.dynamic_rnn(att_cell, hyp_hiddens, dtype=tf.float32,
-                                               sequence_length=self.sentence2_lens_placeholder)
+                                               sequence_length=self.sentence2_lens_placeholder + 1)
                 _, final_hidden = tf.split(final_output, num_or_size_splits=2, axis=1)
                 h_star = tf.layers.dense(final_hidden,
                                          self._hidden_size,

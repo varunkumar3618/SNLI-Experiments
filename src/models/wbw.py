@@ -7,7 +7,7 @@ class WBWCell(tf.contrib.rnn.RNNCell):
     def __init__(self, hidden_size, subject, initializer, regularizer):
         self._hidden_size = hidden_size
 
-        zeros = tf.zeros([tf.shape(subject)[0], 1, self._hidden_size])
+        zeros = tf.constant(tf.zeros([tf.shape(subject)[0], 1, self._hidden_size]))
         self._subject = tf.concat([zeros, subject], axis=1)
         self._initializer = initializer
         self._regularizer = regularizer
