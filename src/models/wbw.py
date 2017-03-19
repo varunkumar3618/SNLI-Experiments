@@ -7,7 +7,7 @@ class WBWCell(tf.contrib.rnn.RNNCell):
     def __init__(self, hidden_size, subject, initializer, regularizer):
         self._hidden_size = hidden_size
 
-        zeros = tf.constant(tf.zeros([tf.shape(subject)[0], 1, self._hidden_size]))
+        zeros = tf.zeros([tf.shape(subject)[0], 1, self._hidden_size])
         self._subject = tf.concat([zeros, subject], axis=1)
         self._initializer = initializer
         self._regularizer = regularizer
@@ -60,8 +60,8 @@ class WBWCell(tf.contrib.rnn.RNNCell):
                                       activation=tf.tanh,
                                       name="r_state")
             r = r_subject + r_state
-            r_and_att = tf.concat(r, alpha, axis=2)
-        return r_and_att, r
+            
+        return r, r
 
 class WBWModel(AttentionModel):
     def attention(self, prem_hiddens, prem_final_state, hyp_hiddens, hyp_final_state):
@@ -76,7 +76,6 @@ class WBWModel(AttentionModel):
             )
             _, r_final = tf.nn.dynamic_rnn(att_cell, hyp_hiddens, dtype=tf.float32,
                                            sequence_length=self.sentence2_lens_placeholder)
-            r_final = tf.splice(r_final)
             h_star = tf.layers.dense(tf.concat([r_final, hyp_final_hidden], axis=1),
                                      self._hidden_size,
                                      kernel_initializer=self.dense_init,

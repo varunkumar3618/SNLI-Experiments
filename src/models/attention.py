@@ -59,10 +59,10 @@ class AttentionModel(SNLIModel):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         hyp_final_hidden = hyp_final_state[1]
         with tf.variable_scope("attention"):
-            # zeros = tf.zeros([tf.shape(prem_hiddens)[0], 1, self._hidden_size], name="zeros")
-            # subject = tf.concat([zeros, prem_hiddens], axis=1)
+            zeros = tf.zeros([tf.shape(prem_hiddens)[0], 1, self._hidden_size], name="zeros")
+            subject = tf.concat([zeros, prem_hiddens], axis=1)
 
-            M_prem = tf.layers.dense(prem_hiddens, self._hidden_size,
+            M_prem = tf.layers.dense(subject, self._hidden_size,
                                      kernel_initializer=self.dense_init,
                                      kernel_regularizer=reg,
                                      name="M_prem")
@@ -76,16 +76,8 @@ class AttentionModel(SNLIModel):
                                 kernel_regularizer=reg, name="A")
             A = tf.squeeze(A, axis=2)
             alpha = tf.nn.softmax(A)
-            # # mask = np.zeros([tf.shape(alpha)[0], tf.shape(alpha)[1]])
-            # # mask[0:self.sentence1_lens_placeholder] = 1
-            # # mask2 = tf.constant(mask, dtype=float32)
-            # mask = tf.sequence_mask(self.sentence1_lens_placeholder+1, 
-            #                         tf.shape(prem_hiddens)[1]+1, dtype=tf.float32)
-            # alpha2 = alpha * mask
-            # print "Alpha2 shape is ", tf.shape(alpha2)[0], tf.shape(alpha2)[1]
-            # alpha_scaled = tf.divide(alpha2, tf.reduce_sum(alpha2, axis=1))
-
-            r = tf.reduce_sum(subject * tf.expand_dims(alpha, axis=2), axis=2)
+            
+            r = tf.reduce_sum(subject * tf.expand_dims(alpha, axis=2), axis=1)
 
             h_star = tf.layers.dense(tf.concat([r, hyp_final_hidden], 1), self._hidden_size,
                                      kernel_initializer=self.dense_init,
