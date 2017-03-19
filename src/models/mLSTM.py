@@ -4,7 +4,7 @@ from src.models.attention import AttentionModel
 
 """ The mLSTM model is based on the paper by Cheng and Jiang. Since the basic RNNCell
 format does not allow access to the previous h (just the old state, which corresponds to
-cell in an LSTM), the state passed at each timestep is actually a concatentation of the 
+cell in an LSTM), the state passed at each timestep is actually a concatentation of the
 cell and the hidden output. """
 class mLSTMCell(tf.contrib.rnn.RNNCell):
     def __init__(self, hidden_size, subject, initializer, regularizer):
@@ -22,7 +22,7 @@ class mLSTMCell(tf.contrib.rnn.RNNCell):
                 tf.zeros(shape=[tf.shape(subject)[0], self._hidden_size], dtype=subject.dtype)
             )
             self._scope.reuse_variables()
-            
+
     @property
     def state_size(self):
         return self._state_size
@@ -73,9 +73,9 @@ class mLSTMCell(tf.contrib.rnn.RNNCell):
             #                          kernel_regularizer=self._regularizer,
             #                          name="input_2")
             # input_gate = tf.tanh(input_1 + input_2, name="input_gate")
-            input_gate = tf.layers.dense(full_inputs, self._hidden_size, 
-                                       kernel_initializer=self._initializer, 
-                                       kernel_regularizer=self._regularizer, 
+            input_gate = tf.layers.dense(full_inputs, self._hidden_size,
+                                       kernel_initializer=self._initializer,
+                                       kernel_regularizer=self._regularizer,
                                        activation=tf.tanh, name="input_gate")
 
             # forget_1 = tf.layers.dense(m_k, self._hidden_size,
@@ -87,9 +87,9 @@ class mLSTMCell(tf.contrib.rnn.RNNCell):
             #                          kernel_regularizer=self._regularizer,
             #                          name="forget_2")
             # forget_gate = tf.tanh(forget_1 + forget_2, name="forget_gate")
-            forget_gate = tf.layers.dense(full_inputs, self._hidden_size, 
-                                       kernel_initializer=self._initializer, 
-                                       kernel_regularizer=self._regularizer, 
+            forget_gate = tf.layers.dense(full_inputs, self._hidden_size,
+                                       kernel_initializer=self._initializer,
+                                       kernel_regularizer=self._regularizer,
                                        activation=tf.tanh, name="forget_gate")
 
             # output_1 = tf.layers.dense(m_k, self._hidden_size,
@@ -101,9 +101,9 @@ class mLSTMCell(tf.contrib.rnn.RNNCell):
             #                          kernel_regularizer=self._regularizer,
             #                          name="output_2")
             # output_gate = tf.tanh(output_1 + output_2, name="output_gate")
-            output_gate = tf.layers.dense(full_inputs, self._hidden_size, 
-                                       kernel_initializer=self._initializer, 
-                                       kernel_regularizer=self._regularizer, 
+            output_gate = tf.layers.dense(full_inputs, self._hidden_size,
+                                       kernel_initializer=self._initializer,
+                                       kernel_regularizer=self._regularizer,
                                        activation=tf.tanh, name="output_gate")
 
             # intermediate_1 = tf.layers.dense(m_k, self._hidden_size,
@@ -114,11 +114,11 @@ class mLSTMCell(tf.contrib.rnn.RNNCell):
             #                          kernel_initializer=self._initializer,
             #                          kernel_regularizer=self._regularizer,
             #                          name="intermediate_2")
-            intermediate = tf.layers.dense(full_inputs, self._hidden_size, 
-                                       kernel_initializer=self._initializer, 
-                                       kernel_regularizer=self._regularizer, 
+            intermediate = tf.layers.dense(full_inputs, self._hidden_size,
+                                       kernel_initializer=self._initializer,
+                                       kernel_regularizer=self._regularizer,
                                        activation=tf.tanh, name="intermediate")
-           
+
             new_cell = tf.multiply(forget_gate, cell) + tf.multiply(input_gate, intermediate)
             new_hidden = tf.multiply(output_gate, tf.tanh(new_cell))
             new_state = tf.concat([new_cell, new_hidden], axis=1, name="new_state")
@@ -146,4 +146,4 @@ class mLSTMModel(AttentionModel):
                                          kernel_regularizer=reg,
                                          activation=tf.tanh,
                                          name="h_star")
-        return h_star
+        return h_star, None

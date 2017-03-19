@@ -238,11 +238,13 @@ class SNLIModel(object):
             acc: accuracy over the batch (a scalar)
             loss: loss over the batch (a scalar)
             predictions: np.ndarray of shape (n_samples,)
+            attn: np.ndarray of shape (n_samples, max_len_seq)
         """
         feed = self.create_feed_dict(sentence1_batch, sentence1_lens_batch,
                                      sentence2_batch, sentence2_lens_batch,
                                      labels_batch, is_training=False)
-        return sess.run([self.acc_op, self.loss, self.pred], feed_dict=feed)
+        # TODO: Support attention weight [n_samples, max_len_seq, max_len_seq] for WBW model
+        return sess.run([self.acc_op, self.loss, self.pred, self.attn], feed_dict=feed)
 
     def predict_on_batch(self, sess,
                          sentence1_batch, sentence1_lens_batch,
@@ -266,7 +268,7 @@ class SNLIModel(object):
 
     def build(self):
         self.add_placeholders()
-        self.pred, self.logits = self.add_prediction_op()
+        self.pred, self.logits, self.attn = self.add_prediction_op()
         self.loss = self.add_loss_op(self.pred, self.logits)
         self.train_op = self.add_training_op(self.loss)
         self.acc_op = self.add_acc_op(self.pred)

@@ -31,6 +31,7 @@ flags.DEFINE_string("alt_name", "model", "The name of the alternate second model
 
 # Data
 flags.DEFINE_integer("max_seq_len", 100, "The maximum length of a sentence. Sentences longer than this will be truncated.")
+flags.DEFINE_integer("sentence_index", 0, "The index of the data point to perform attention evaluation.")
 
 #Analysis
 flags.DEFINE_string("analysis_type", "", "The analysis to run.")
@@ -147,6 +148,33 @@ def diff_models(vocab, dataset):
             outf.write("%s: %.2f (%s/%s)\n" % (dataset.int_to_label(i), alt_model_accuracy[i], alt_model_correct[i], total[i]))
 
 
+def attention_report(vocab, dataset):
+    sentence1s = dataset.get_sentence1(FLAGS.split)
+    attention1s = np.load(os.path.join(results_dir, "attention_%s.npy" % FLAGS.split))
+    sentence = sentence1s[FLAGS.sentence_index]
+    attention = attention1s[FLAGS.sentence_index]
+
+    fig, ax = plt.subplots()
+
+    # TODO: Figure out the proper attention vector and truncate it to its sentence length.
+    # Set to capture the first 15 words and look in the first batch by default right now.
+    heatmap = ax.pcolor([attention[0][:15]], cmap=mpl.cm.Blues)
+
+    # put the major ticks at the middle of each cell
+    ax.set_xticks(np.arange(15)+0.5, minor=False)
+    ax.set_yticks([])
+
+    # want a more natural, table-like display
+    ax.set_aspect('equal') # X scale matches Y scale
+    ax.invert_yaxis()
+    ax.xaxis.tick_top()
+
+    ax.set_xticklabels(sentence.split(" "), rotation="vertical")
+    ax.set_yticklabels([])
+
+    plt.savefig(FLAGS.analysis_path)
+
+
 def main(_):
     vocab = Vocab(snli_dir, vocab_file)
     dataset = Dataset(snli_dir, regular_data_file, debug_data_file, vocab,
@@ -158,6 +186,8 @@ def main(_):
         error_report(vocab, dataset)
     elif FLAGS.analysis_type == "diff":
         diff_models(vocab, dataset)
+    elif FLAGS.analysis_type == "attention":
+        attention_report(vocab, dataset)
     else:
         raise ValueError("Unrecognized analysis: %s" % FLAGS.analysis_type)
 
