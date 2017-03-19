@@ -143,7 +143,7 @@ def run_eval_epoch(sess, model, dataset, split):
     batch_sizes = []
     accuracies = []
     preds = []
-    attns = []
+    attns = np.array([]).reshape(0, FLAGS.max_seq_len)
 
     print "-"*79
     print "Evaluating on %s." % split
@@ -157,7 +157,7 @@ def run_eval_epoch(sess, model, dataset, split):
         preds.append(pred)
 
         if attn is not None:  # only for attentive models
-            attns.append(attn)
+            attns = np.vstack([attns, attn])
 
     accuracy = np.average(accuracies, weights=batch_sizes)
     print "Accuracy: %s" % accuracy
@@ -186,7 +186,7 @@ def test(model, dataset, split):
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         saver.restore(sess, checkpoint_path)
-        _, preds, attn = run_eval_epoch(sess, model, dataset, split)
+        _, preds, attns = run_eval_epoch(sess, model, dataset, split)
 
         save_path = os.path.join(results_dir, "predictions_%s.txt" % split)
         np.savetxt(save_path, preds)
@@ -194,9 +194,11 @@ def test(model, dataset, split):
         np.save(np_save_path, preds)
 
         # Save attention weights, if applicable.
-        if attn is not None:
-            np_attn_save_path = os.path.join(results_dir, "attention_%s.npy" % split)
-            np.save(np_attn_save_path, attn)
+        if attns is not None:
+            attns_save_path = os.path.join(results_dir, "attention_%s.txt" % split)
+            np.savetxt(attns_save_path, attns)
+            np_attns_save_path = os.path.join(results_dir, "attention_%s.npy" % split)
+            np.save(np_attns_save_path, attns)
 
 def main(_):
     with tf.Graph().as_default():

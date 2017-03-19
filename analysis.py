@@ -108,8 +108,6 @@ def diff_models(vocab, dataset):
 
     # Gather alternate model information
     alt_model_dir = os.path.join(base_models_dir, FLAGS.alt_name)
-    alt_checkpoint_dir = os.path.join(alt_model_dir, "checkpoint")
-    alt_checkpoint_path = os.path.join(alt_checkpoint_dir, "model.ckpt")
     alt_results_dir = os.path.join(alt_model_dir, "results")
 
     predicted_labels = np.load(os.path.join(results_dir, "predictions_%s.npy" % FLAGS.split))
@@ -152,16 +150,17 @@ def attention_report(vocab, dataset):
     sentence1s = dataset.get_sentence1(FLAGS.split)
     attention1s = np.load(os.path.join(results_dir, "attention_%s.npy" % FLAGS.split))
     sentence = sentence1s[FLAGS.sentence_index]
+    sentence_length = len(sentence.split(" "))
     attention = attention1s[FLAGS.sentence_index]
 
     fig, ax = plt.subplots()
 
-    # TODO: Figure out the proper attention vector and truncate it to its sentence length.
-    # Set to capture the first 15 words and look in the first batch by default right now.
-    heatmap = ax.pcolor([attention[0][:15]], cmap=mpl.cm.Blues)
+    # TODO: Figure out why some sentences have extra nonzero attention weights.
+    # This may be intended behavior; perhaps punctuation counts as a token.
+    heatmap = ax.pcolor([attention[:sentence_length]], cmap=mpl.cm.Blues)
 
     # put the major ticks at the middle of each cell
-    ax.set_xticks(np.arange(15)+0.5, minor=False)
+    ax.set_xticks(np.arange(sentence_length)+0.5, minor=False)
     ax.set_yticks([])
 
     # want a more natural, table-like display
