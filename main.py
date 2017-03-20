@@ -143,7 +143,7 @@ def run_eval_epoch(sess, model, dataset, split):
     batch_sizes = []
     accuracies = []
     preds = []
-    attns = np.array([]).reshape(0, FLAGS.max_seq_len)
+    attns = np.array([]).reshape(0, FLAGS.max_seq_len + 1)
 
     print "-"*79
     print "Evaluating on %s." % split
