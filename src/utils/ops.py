@@ -30,3 +30,16 @@ def cosine(x, y):
     x_mag = tf.sqrt(tf.tensordot(x, x, axes=1))
     y_mag = tf.sqrt(tf.tensordot(y, y, axes=1))
     return tf.tensordot(x, y, axes=1) / (X_mag * y_mag)
+
+def masked_sequence_softmax(logits, sequence_lens):
+    logits = logits - tf.reduce_max(logits, axis=1, keep_dims=True)
+
+    mask = tf.sequence_mask(sequence_lens, tf.shape(logits)[1], dtype=logits.dtype)
+    mask = tf.expand_dims(mask, axis=3)
+
+    unnorm = tf.exp(logits) * mask
+    return unnorm / tf.reduce_sum(unnorm, axis=1, keep_dims=True)
+
+def add_null_vector(seq):
+    zeros = tf.zeros([tf.shape(seq)[0], 1, tf.shape(seq)[2]])
+    return tf.concat([zeros, seq], axis=1)

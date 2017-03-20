@@ -1,6 +1,7 @@
 import tensorflow as tf
 
 from src.models.model import SNLIModel
+from src.utils.ops import add_null_vector
 
 class Chen(SNLIModel):
     def __init__(self,
@@ -64,9 +65,12 @@ class Chen(SNLIModel):
 
         return prem_hiddens, prem_final_state, hyp_hiddens, hyp_final_state
 
-    def attention(self, x, y, scope):
+    def attention(self, prem_hiddens, hyp_hiddens, scope):
         with tf.variable_scope(scope):
-            E = tf.exp(tf.einsum("aij,ajk->aik", x, tf.transpose(y, perm=[0, 2, 1])))
+            prem_hiddens = add_null_vector(prem_hiddens)
+            hyp_hiddens = add_null_vector(hyp_hiddens)
+
+            tf.einsum("aij,ajk->aik", x, tf.transpose(y, perm=[0, 2, 1]))
 
             Num_beta = tf.einsum("aij,ajk->aik", E, y)
             Den_beta = tf.reduce_sum(E, axis=2)

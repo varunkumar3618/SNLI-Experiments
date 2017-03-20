@@ -1,6 +1,7 @@
 import tensorflow as tf
 
 from src.models.model import SNLIModel
+from src.utils.ops import masked_sequence_softmax, add_null_vector
 
 class AttentionModel(SNLIModel):
     def __init__(self,
@@ -58,6 +59,8 @@ class AttentionModel(SNLIModel):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         hyp_final_hidden = hyp_final_state[1]
         with tf.variable_scope("attention"):
+            prem_hiddens = add_null_vector(prem_hiddens)
+
             M_prem = tf.layers.dense(prem_hiddens, self._hidden_size,
                                      kernel_initializer=self.dense_init,
                                      kernel_regularizer=reg,
@@ -69,9 +72,11 @@ class AttentionModel(SNLIModel):
             M = self.activation(M_prem + tf.expand_dims(M_hyp_final, axis=1))
 
             A = tf.layers.dense(M, 1, kernel_initializer=self.dense_init,
-                                kernel_regularizer=reg, name="A")
+                                kernel_regularizer=reg, use_bias=False,
+                                name="A")
             A = tf.squeeze(A, axis=2)
-            alpha = tf.nn.softmax(A)
+
+            alpha = masked_sequence_softmax(A, self.sentence1_lens_placeholder + 1)
 
             r = tf.reduce_sum(prem_hiddens * tf.expand_dims(alpha, axis=2), axis=1)
 
