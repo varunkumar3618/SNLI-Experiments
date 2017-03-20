@@ -35,7 +35,7 @@ def masked_sequence_softmax(logits, sequence_lens):
     logits = logits - tf.reduce_max(logits, axis=1, keep_dims=True)
 
     mask = tf.sequence_mask(sequence_lens, tf.shape(logits)[1], dtype=logits.dtype)
-    mask = tf.expand_dims(mask, axis=3)
+    mask = tf.expand_dims(mask, axis=2)
 
     unnorm = tf.exp(logits) * mask
     return unnorm / tf.reduce_sum(unnorm, axis=1, keep_dims=True)
