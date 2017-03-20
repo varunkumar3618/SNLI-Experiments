@@ -77,12 +77,7 @@ class AttentionModel(SNLIModel):
             A = tf.squeeze(A, axis=2)
             alpha = masked_sequence_softmax(A, self.sentence1_lens_placeholder + 1)
 
-            # Masked implementation of batchwise softmax
-            A = A - tf.reduce_max(A, axis=1, keep_dims=True)
-            e = tf.exp(A)
-            mask_e = tf.multiply(e, mask)
-            alpha = mask_e / tf.reduce_sum(mask_e, axis=1, keep_dims=True)
-            r = tf.reduce_sum(subject * tf.expand_dims(alpha, axis=2), axis=1)
+            r = tf.reduce_sum(prem_hiddens * tf.expand_dims(alpha, axis=2), axis=1)
 
             h_star = tf.layers.dense(tf.concat([r, hyp_final_hidden], 1), self._hidden_size,
                                      kernel_initializer=self.dense_init,
