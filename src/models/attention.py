@@ -1,6 +1,7 @@
 import tensorflow as tf
 
 from src.models.model import SNLIModel
+from src.utils.ops import masked_sequence_softmax, add_null_vector
 
 class AttentionModel(SNLIModel):
     def __init__(self,
@@ -58,10 +59,9 @@ class AttentionModel(SNLIModel):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         hyp_final_hidden = hyp_final_state[1]
         with tf.variable_scope("attention"):
-            zeros = tf.zeros([tf.shape(prem_hiddens)[0], 1, self._hidden_size], name="zeros")
-            subject = tf.concat([zeros, prem_hiddens], axis=1)
+            prem_hiddens = add_null_vector(prem_hiddens)
 
-            M_prem = tf.layers.dense(subject, self._hidden_size,
+            M_prem = tf.layers.dense(prem_hiddens, self._hidden_size,
                                      kernel_initializer=self.dense_init,
                                      kernel_regularizer=reg,
                                      name="M_prem")
@@ -72,9 +72,10 @@ class AttentionModel(SNLIModel):
             M = self.activation(M_prem + tf.expand_dims(M_hyp_final, axis=1))
 
             A = tf.layers.dense(M, 1, kernel_initializer=self.dense_init,
-                                kernel_regularizer=reg, name="A")
+                                kernel_regularizer=reg, use_bias=False,
+                                name="A")
             A = tf.squeeze(A, axis=2)
-            mask = tf.sequence_mask(self.sentence1_lens_placeholder + 1, self._max_seq_len + 1, dtype=tf.float32)
+            alpha = masked_sequence_softmax(A, self.sentence1_lens_placeholder + 1)
 
             # Masked implementation of batchwise softmax
             A = A - tf.reduce_max(A, axis=1, keep_dims=True)
