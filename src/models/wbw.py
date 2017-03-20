@@ -1,12 +1,14 @@
 import tensorflow as tf
 
 from src.models.attention import AttentionModel
+from src.utils.ops import add_null_vector, masked_sequence_softmax
 
 
 class WBWCell(tf.contrib.rnn.RNNCell):
-    def __init__(self, hidden_size, subject, initializer, regularizer):
+    def __init__(self, hidden_size, subject, subject_lens, initializer, regularizer):
         self._hidden_size = hidden_size
-        self._subject = subject
+        self._subject = add_null_vector(subject)
+        self._subject_lens = subject_lens + 1
         self._initializer = initializer
         self._regularizer = regularizer
 
@@ -46,10 +48,13 @@ class WBWCell(tf.contrib.rnn.RNNCell):
                                       name="M_state")
             M = tf.tanh(M_prem + tf.expand_dims(M_in, axis=1) + tf.expand_dims(M_state, axis=1))
 
-            A = tf.layers.dense(M, 1, kernel_initializer=self._initializer,
-                                kernel_regularizer=self._regularizer, name="A")
+            A = tf.layers.dense(M, 1,
+                                kernel_initializer=self._initializer,
+                                kernel_regularizer=self._regularizer,
+                                use_bias=False,
+                                name="A")
             A = tf.squeeze(A, axis=2)
-            alpha = tf.nn.softmax(A)
+            alpha = masked_sequence_softmax(A, self._subject_lens)
 
             r_subject = tf.reduce_sum(self._subject * tf.expand_dims(alpha, axis=2), axis=1)
             r_state = tf.layers.dense(state, self._hidden_size,
@@ -69,6 +74,7 @@ class WBWModel(AttentionModel):
             att_cell = WBWCell(
                 self._hidden_size,
                 prem_hiddens,
+                self.sentence1_lens_placeholder,
                 self.dense_init,
                 reg
             )
