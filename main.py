@@ -143,7 +143,7 @@ def run_eval_epoch(sess, model, dataset, split):
     batch_sizes = []
     accuracies = []
     preds = []
-    all_logits = []
+    all_logits = np.array([]).reshape(0, 3)
 
     print "-"*79
     print "Evaluating on %s." % split
@@ -155,12 +155,14 @@ def run_eval_epoch(sess, model, dataset, split):
         batch_sizes.append(batch[0].shape[0])
         accuracies.append(acc)
         preds.append(pred)
-        all_logits.append(logits)
+        print logits.shape
+        print all_logits.shape
+        all_logits = np.vstack([all_logits, logits])
 
     accuracy = np.average(accuracies, weights=batch_sizes)
     print "Accuracy: %s" % accuracy
     print "-"*79
-    return accuracy, np.concatenate(logits), np.concatenate(preds)
+    return accuracy, all_logits, np.concatenate(preds)
 
 def train(model, dataset):
     train_writer = tf.summary.FileWriter(train_log_dir)
