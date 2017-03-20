@@ -1,16 +1,18 @@
 import tensorflow as tf
 
 from src.models.attention import AttentionModel
+from src.utils.ops import add_null_vector, masked_sequence_softmax
 
 """ The mLSTM model is based on the paper by Cheng and Jiang. Since the basic RNNCell
 format does not allow access to the previous h (just the old state, which corresponds to
 cell in an LSTM), the state passed at each timestep is actually a concatentation of the 
 cell and the hidden output. """
 class mLSTMCell(tf.contrib.rnn.RNNCell):
-    def __init__(self, hidden_size, subject, initializer, regularizer):
+    def __init__(self, hidden_size, subject, subject_lens, initializer, regularizer):
         self._state_size = 2*hidden_size
         self._hidden_size = hidden_size
-        self._subject = subject
+        self._subject = add_null_vector(subject)
+        self._subject_lens = subject_lens + 1
         self._initializer = initializer
         self._regularizer = regularizer
 
@@ -56,7 +58,7 @@ class mLSTMCell(tf.contrib.rnn.RNNCell):
             A = tf.layers.dense(M, 1, kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                 kernel_regularizer=self._regularizer, name="A")
             A = tf.squeeze(A, axis=2)
-            alpha = tf.nn.softmax(A)
+            alpha = masked_sequence_softmax(A, self._subject_lens)
 
             r_subject = tf.reduce_sum(self._subject * tf.expand_dims(alpha, axis=2), axis=1)
 
@@ -98,7 +100,8 @@ class mLSTMModel(AttentionModel):
             att_cell = mLSTMCell(
                 self._hidden_size,
                 prem_hiddens,
-                tf.contrib.layers.xavier_initializer(),
+                self.sentence1_lens_placeholder,
+                self.dense_init,
                 reg
             )
             with tf.variable_scope("attention"):
