@@ -259,12 +259,12 @@ class SNLIModel(object):
             sentence2_lens_batch: np.ndarray of shape (n_samples)
         Returns:
             predictions: np.ndarray of shape (n_samples,)
+            attn: np.ndarray of shape (n_samples, max_len)
         """
         feed = self.create_feed_dict(sentence1_batch, sentence1_lens_batch,
                                      sentence2_batch, sentence2_lens_batch,
                                      is_training=False)
-        predictions = sess.run(self.pred, feed_dict=feed)
-        return predictions
+        return sess.run([self.pred, self.attn], feed_dict=feed)
 
     def build(self):
         self.add_placeholders()

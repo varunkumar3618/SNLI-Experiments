@@ -200,6 +200,32 @@ def test(model, dataset, split):
             np_attns_save_path = os.path.join(results_dir, "attention_%s.npy" % split)
             np.save(np_attns_save_path, attns)
 
+def predict_user_input(model, dataset, vocab):
+    saver = tf.train.Saver()
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        sess.run(tf.local_variables_initializer())
+        saver.restore(sess, checkpoint_path)
+
+        # Collect user input
+        raw_prem = raw_input("Premise: ")
+        raw_hyp = raw_input("Hypothesis: ")
+
+        def process_sentence(sentence):
+            seq = vocab.ids_for_sentence(sentence)
+            return np.pad(seq, (0, model._max_seq_len - len(seq)), "constant"), \
+                len(seq)
+
+        prem, prem_len = process_sentence(raw_prem)
+        hyp, hyp_len = process_sentence(raw_hyp)
+
+        # Report prediction
+        pred, attn = model.predict_on_batch(sess, [prem], [prem_len], [hyp], [hyp_len])
+
+        print "Prediction:", dataset.int_to_label(pred[0])
+        if attn is not None:
+            print "Attention:", attn  # TODO: pyplot heatmap
+
 def main(_):
     with tf.Graph().as_default():
         print "Vocab"
@@ -218,6 +244,8 @@ def main(_):
             test(model, dataset, "dev")
         elif FLAGS.mode == "test":
             test(model, dataset, "test")
+        elif FLAGS.mode == "interactive":  # predict on custom input
+            predict_user_input(model, dataset, vocab)
         else:
             raise ValueError("Unrecognized mode: %s." % FLAGS.mode)
 
