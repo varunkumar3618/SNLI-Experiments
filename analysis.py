@@ -17,7 +17,7 @@ Script for performing data analysis of model results. Example invocations:
 1) Confusion: Writes out a confusion matrix jpg.
     python analysis.py --name=MyModel --analysis_type=confusion --analysis_path=path/to/file
 2) Error: Writes out the incorrect predictions and the overall accuracy per class.
-    python analysis.py --name=kenny/attn2 --analysis_type=error --analysis_path=analysis.txt
+    python analysis.py --name=MyModel --analysis_type=error_report --analysis_path=path/to/file
 3) Diff: Writes out the disagreeing labels between the two models and the overall accuracy per class per model.
     python analysis.py --name=MyFirstModel --alt_name=MySecondModel --analysis_type=diff --analysis_path=path/to/file
 """
@@ -160,18 +160,18 @@ def attention_report(vocab, dataset):
 
     # TODO: Figure out why some sentences have extra nonzero attention weights.
     # This may be intended behavior; perhaps punctuation counts as a token.
-    print "Premise", premise_sentence
-    print "Hypothesis", hypothesis_sentence
-    print attention
+    print "Premise:", premise_sentence
+    print "Hypothesis:", hypothesis_sentence
+    print "Attention:", attention
     heatmap = ax.pcolor([attention[1 : premise_sentence_len + 1]], cmap=mpl.cm.Blues)
 
     # put the major ticks at the middle of each cell
     ax.set_xticks(np.arange(premise_sentence_len)+0.5, minor=False)
     ax.set_yticks([])
 
-    # want a more natural, table-like display
     ax.set_aspect('equal') # X scale matches Y scale
-    ax.xaxis.tick_top()
+    ax.xaxis.tick_bottom()
+    ax.set_title("Hypothesis: %s" % hypothesis_sentence)
 
     ax.set_xticklabels(premise_sentence.split(" "), rotation="vertical")
     ax.set_yticklabels([])
