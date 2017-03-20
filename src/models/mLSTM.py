@@ -4,11 +4,11 @@ from src.models.attention import AttentionModel
 
 """ The mLSTM model is based on the paper by Cheng and Jiang. Since the basic RNNCell
 format does not allow access to the previous h (just the old state, which corresponds to
-cell in an LSTM), the state passed at each timestep is actually a concatentation of the 
+cell in an LSTM), the state passed at each timestep is actually a concatentation of the
 cell and the hidden output. """
 class mLSTMCell(tf.contrib.rnn.RNNCell):
     def __init__(self, hidden_size, subject, initializer, regularizer):
-        self._state_size = 2*hidden_size
+        self._state_size = 2*hidden_size + tf.shape(subject)[1] + 1
         self._hidden_size = hidden_size
         self._subject = subject
         self._initializer = initializer
@@ -22,7 +22,7 @@ class mLSTMCell(tf.contrib.rnn.RNNCell):
                 tf.zeros(shape=[tf.shape(subject)[0], self._hidden_size], dtype=subject.dtype)
             )
             self._scope.reuse_variables()
-            
+
     @property
     def state_size(self):
         return self._state_size
@@ -34,8 +34,10 @@ class mLSTMCell(tf.contrib.rnn.RNNCell):
     def __call__(self, inputs, state, scope=None):
         scope = scope or type(self).__name__
         with tf.variable_scope(scope):
-            # State is [batch_size X 2 * hidden_size], the concatenated cell and last hidden output
-            cell, hidden = tf.split(state, num_or_size_splits=2, axis=1)
+            # State is [batch_size X 2 * hidden_size + tf.shape(subject)[0]], 
+            # the concatenated cell and last hidden output and previous attentions
+            cell, hidden, _ = tf.split(state, 
+                num_or_size_splits=[self._hidden_size, self._hidden_size, tf.shape(subject)[1] + 1], axis=1)
             # W_y * Y
             M_prem = tf.layers.dense(self._subject, self._hidden_size,
                                      kernel_initializer=self._initializer,
@@ -83,10 +85,10 @@ class mLSTMCell(tf.contrib.rnn.RNNCell):
                                        kernel_initializer=self._initializer, 
                                        kernel_regularizer=self._regularizer, 
                                        activation=tf.tanh, name="intermediate")
-           
+
             new_cell = tf.multiply(forget_gate, cell) + tf.multiply(input_gate, intermediate)
             new_hidden = tf.multiply(output_gate, tf.tanh(new_cell))
-            new_state = tf.concat([new_cell, new_hidden], axis=1, name="new_state")
+            new_state = tf.concat([new_cell, new_hidden, alpha], axis=1, name="new_state")
 
         return new_state, new_state
 
@@ -102,13 +104,17 @@ class mLSTMModel(AttentionModel):
                 reg
             )
             with tf.variable_scope("attention"):
-                _, final_output = tf.nn.dynamic_rnn(att_cell, hyp_hiddens, dtype=tf.float32,
+                all_outputs, final_output = tf.nn.dynamic_rnn(att_cell, hyp_hiddens, dtype=tf.float32,
                                                sequence_length=self.sentence2_lens_placeholder)
-                _, final_hidden = tf.split(final_output, num_or_size_splits=2, axis=1)
+                _, final_hidden, _ = tf.split(final_output, 
+                    num_or_size_splits=[self._hidden_size, self._hidden_size, tf.shape(subject)[1] + 1], axis=1)
+                _, _, attn = tf.split(all_outputs, 
+                    num_or_size_splits=[self._hidden_size, self._hidden_size, tf.shape(subject)[1] + 1], axis=1)
+
                 h_star = tf.layers.dense(final_hidden,
                                          self._hidden_size,
                                          kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                          kernel_regularizer=reg,
                                          activation=tf.tanh,
                                          name="h_star")
-        return h_star
+        return h_star, None

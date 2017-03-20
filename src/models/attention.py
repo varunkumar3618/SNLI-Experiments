@@ -14,7 +14,7 @@ class AttentionModel(SNLIModel):
         self._hidden_size = hidden_size
         self._use_peepholes = use_peepholes
         self._l2_reg = l2_reg
-        
+
     def embedding(self):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         with tf.variable_scope("embedding"):
@@ -75,7 +75,6 @@ class AttentionModel(SNLIModel):
                                 kernel_regularizer=reg, use_bias=False,
                                 name="A")
             A = tf.squeeze(A, axis=2)
-
             alpha = masked_sequence_softmax(A, self.sentence1_lens_placeholder + 1)
 
             r = tf.reduce_sum(prem_hiddens * tf.expand_dims(alpha, axis=2), axis=1)
@@ -85,7 +84,7 @@ class AttentionModel(SNLIModel):
                                      kernel_regularizer=reg,
                                      activation=self.activation,
                                      name="h_star")
-        return h_star
+        return h_star, alpha
 
     def classification(self, h_star):
         reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
@@ -103,6 +102,6 @@ class AttentionModel(SNLIModel):
             prem_proj, hyp_proj = self.embedding()
             prem_hiddens, prem_final_state, hyp_hiddens, hyp_final_state\
                 = self.encoding(prem_proj, hyp_proj)
-            h_star = self.attention(prem_hiddens, prem_final_state, hyp_hiddens, hyp_final_state)
+            h_star, attn = self.attention(prem_hiddens, prem_final_state, hyp_hiddens, hyp_final_state)
             preds, logits = self.classification(h_star)
-        return preds, logits
+        return preds, logits, attn

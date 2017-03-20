@@ -27,7 +27,7 @@ class WBWCell(tf.contrib.rnn.RNNCell):
 
     @property
     def output_size(self):
-        return self._hidden_size
+        return self._hidden_size + 101
 
     def __call__(self, inputs, state, scope=None):
         if scope is not None:
@@ -63,8 +63,9 @@ class WBWCell(tf.contrib.rnn.RNNCell):
                                       activation=tf.tanh,
                                       name="r_state")
             r = r_subject + r_state
-
-        return r, r
+            output = tf.concat([r, alpha], axis=1, name="r_and_alpha")
+           
+        return output, r
 
 class WBWModel(AttentionModel):
     def attention(self, prem_hiddens, prem_final_state, hyp_hiddens, hyp_final_state):
@@ -78,12 +79,13 @@ class WBWModel(AttentionModel):
                 self.dense_init,
                 reg
             )
-            _, r_final = tf.nn.dynamic_rnn(att_cell, hyp_hiddens, dtype=tf.float32,
+            outputs, r_final = tf.nn.dynamic_rnn(att_cell, hyp_hiddens, dtype=tf.float32,
                                            sequence_length=self.sentence2_lens_placeholder)
+            _, attn = tf.split(outputs, num_or_size_splits=[self._hidden_size, self._max_seq_len+1], axis=2)
             h_star = tf.layers.dense(tf.concat([r_final, hyp_final_hidden], axis=1),
                                      self._hidden_size,
                                      kernel_initializer=self.dense_init,
                                      kernel_regularizer=reg,
                                      activation=tf.tanh,
                                      name="h_star")
-        return h_star
+        return h_star, attn
