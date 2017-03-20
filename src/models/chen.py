@@ -77,6 +77,10 @@ class Chen(SNLIModel):
 
             beta = tf.einsum("aij,ajk->aik", beta_weights, hyp_hiddens)
             alpha = tf.einsum("aij,ajk->aik", alpha_weights, prem_hiddens)
+
+            # Remove the null vector
+            beta = tf.slice(beta, [0, 1, 0], [-1, -1, -1])
+            alpha = tf.slice(alpha, [0, 1, 0], [-1, -1, -1])
         return beta, alpha
 
     def collection(self, prem_hiddens, prem_tilda, hyp_hiddens, hyp_tilda):
