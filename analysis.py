@@ -17,7 +17,7 @@ Script for performing data analysis of model results. Example invocations:
 1) Confusion: Writes out a confusion matrix jpg.
     python analysis.py --name=MyModel --analysis_type=confusion --analysis_path=path/to/file
 2) Error: Writes out the incorrect predictions and the overall accuracy per class.
-    python analysis.py --name=MyModel --analysis_type=error --analysis_path=path/to/file
+    python analysis.py --name=kenny/attn2 --analysis_type=error --analysis_path=analysis.txt
 3) Diff: Writes out the disagreeing labels between the two models and the overall accuracy per class per model.
     python analysis.py --name=MyFirstModel --alt_name=MySecondModel --analysis_type=diff --analysis_path=path/to/file
 """
@@ -99,7 +99,7 @@ def error_report(vocab, dataset):
         accuracy = total_correct / total
         outf.write("Total accuracy by class:\n")
         for i in range(3):
-            outf.write("%s: %.2f (%s/%s)\n" % (dataset.int_to_label(i), model_accuracy[i], total_correct[i], total[i]))
+            outf.write("%s: %.2f (%s/%s)\n" % (dataset.int_to_label(i), accuracy[i], total_correct[i], total[i]))
 
 def diff_models(vocab, dataset):
     true_labels = dataset.get_true_labels(FLAGS.split)
@@ -148,27 +148,32 @@ def diff_models(vocab, dataset):
 
 def attention_report(vocab, dataset):
     sentence1s = dataset.get_sentence1(FLAGS.split)
-    attention1s = np.load(os.path.join(results_dir, "attention_%s.npy" % FLAGS.split))
-    sentence = sentence1s[FLAGS.sentence_index]
-    sentence_length = len(sentence.split(" "))
-    attention = attention1s[FLAGS.sentence_index]
+    sentence2s = dataset.get_sentence2(FLAGS.split)
+    attentions = np.load(os.path.join(results_dir, "attention_%s.npy" % FLAGS.split))
+
+    premise_sentence = sentence1s[FLAGS.sentence_index]
+    hypothesis_sentence = sentence2s[FLAGS.sentence_index]
+    premise_sentence_len = len(premise_sentence.split(" "))
+    attention = attentions[FLAGS.sentence_index]
 
     fig, ax = plt.subplots()
 
     # TODO: Figure out why some sentences have extra nonzero attention weights.
     # This may be intended behavior; perhaps punctuation counts as a token.
-    heatmap = ax.pcolor([attention[:sentence_length]], cmap=mpl.cm.Blues)
+    print "Premise", premise_sentence
+    print "Hypothesis", hypothesis_sentence
+    print attention
+    heatmap = ax.pcolor([attention[1 : premise_sentence_len + 1]], cmap=mpl.cm.Blues)
 
     # put the major ticks at the middle of each cell
-    ax.set_xticks(np.arange(sentence_length)+0.5, minor=False)
+    ax.set_xticks(np.arange(premise_sentence_len)+0.5, minor=False)
     ax.set_yticks([])
 
     # want a more natural, table-like display
     ax.set_aspect('equal') # X scale matches Y scale
-    ax.invert_yaxis()
     ax.xaxis.tick_top()
 
-    ax.set_xticklabels(sentence.split(" "), rotation="vertical")
+    ax.set_xticklabels(premise_sentence.split(" "), rotation="vertical")
     ax.set_yticklabels([])
 
     plt.savefig(FLAGS.analysis_path)
