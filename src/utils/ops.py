@@ -33,11 +33,23 @@ def cosine(x, y):
 
 def masked_sequence_softmax(logits, sequence_lens):
     logits = logits - tf.reduce_max(logits, axis=1, keep_dims=True)
-
     mask = tf.sequence_mask(sequence_lens, tf.shape(logits)[1], dtype=logits.dtype)
 
     unnorm = tf.exp(logits) * mask
     return unnorm / tf.reduce_sum(unnorm, axis=1, keep_dims=True)
+
+def two_way_masked_sequence_softmax(logits, sequence1_lens, sequence2_lens):
+    logits1 = logits - tf.reduce_max(logits, axis=2, keep_dims=True)
+    mask = tf.sequence_mask(sequence2_lens, tf.shape(logits)[2], dtype=logits.dtype)
+    unnorm1 = tf.exp(logits1) * tf.expand_dims(mask, axis=1)
+    norm1 = unnorm1 / tf.reduce_sum(unnorm1, axis=2, keep_dims=True)
+
+    logits2 = logits - tf.reduce_max(logits, axis=1, keep_dims=True)
+    mask = tf.sequence_mask(sequence1_lens, tf.shape(logits)[1], dtype=loits.type)
+    unnorm2 = tf.exp(logits2) * tf.expand_dims(mask, axis=2)
+    norm2 = unnorm2 / tf.reduce_sum(unnorm2, axis=1, keep_dims=True)
+
+    return norm1, norm2
 
 def add_null_vector(seq):
     zeros = tf.zeros([tf.shape(seq)[0], 1, tf.shape(seq)[2]])

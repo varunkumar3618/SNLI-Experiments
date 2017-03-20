@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 from src.models.model import SNLIModel
-from src.utils.ops import add_null_vector
+from src.utils.ops import add_null_vector, two_way_masked_sequence_softmax
 
 class Chen(SNLIModel):
     def __init__(self,
@@ -70,15 +70,13 @@ class Chen(SNLIModel):
             prem_hiddens = add_null_vector(prem_hiddens)
             hyp_hiddens = add_null_vector(hyp_hiddens)
 
-            tf.einsum("aij,ajk->aik", x, tf.transpose(y, perm=[0, 2, 1]))
+            A = tf.einsum("aij,ajk->aik", prem_hiddens, tf.transpose(hyp_hiddens, perm=[0, 2, 1]))
+            beta_weights, alpha_weights = two_way_masked_sequence_softmax(
+                A, self.sentence1_lens_placeholder + 1, self.sentence2_lens_placeholder + 1
+            )
 
-            Num_beta = tf.einsum("aij,ajk->aik", E, y)
-            Den_beta = tf.reduce_sum(E, axis=2)
-            beta = Num_beta / tf.expand_dims(Den_beta, axis=2)
-
-            Num_alpha = tf.einsum("aij,aik->ajk", E, x)
-            Den_alpha = tf.reduce_sum(E, axis=1)
-            alpha = Num_alpha / tf.expand_dims(Den_alpha, axis=2)
+            beta = tf.einsum("aij,ajk->aik", beta_weights, hyp_hiddens)
+            alpha = tf.einsum("aij,ajk->aik", alpha_weights, prem_hiddens)
         return beta, alpha
 
     def collection(self, prem_hiddens, prem_tilda, hyp_hiddens, hyp_tilda):
