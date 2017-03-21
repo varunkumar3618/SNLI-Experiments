@@ -66,11 +66,13 @@ class Chen(SNLIModel):
         return prem_hiddens, prem_final_state, hyp_hiddens, hyp_final_state
 
     def attention(self, prem_hiddens, hyp_hiddens, scope):
+        reg = tf.contrib.layers.l2_regularizer(self._l2_reg)
         with tf.variable_scope(scope):
             prem_hiddens = add_null_vector(prem_hiddens)
             hyp_hiddens = add_null_vector(hyp_hiddens)
-
-            A = tf.einsum("aij,ajk->aik", prem_hiddens, tf.transpose(hyp_hiddens, perm=[0, 2, 1]))
+            w = tf.get_variable("w", shape=[self._hidden_size, self._hidden_size], regularizer=reg, initializer=tf.contrib.layers.xavier_initializer())
+            prem_hiddens_ = prem_hiddens * tf.expand_dims(tf.expand_dims(w, axis=0), axis=0)
+            A = tf.einsum("aij,ajk->aik", prem_hiddens_, tf.transpose(hyp_hiddens, perm=[0, 2, 1]))
             beta_weights, alpha_weights = two_way_masked_sequence_softmax(
                 A, self.sentence1_lens_placeholder + 1, self.sentence2_lens_placeholder + 1
             )
