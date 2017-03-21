@@ -82,7 +82,7 @@ class Dataset(object):
         s1_padded = df["s1_indices"].apply(lambda s1: pad_fn(s1, max_sentence1_length))
         s2_padded = df["s2_indices"].apply(lambda s2: pad_fn(s2, max_sentence2_length))
 
-        return max_sentence1_length, max_sentence2_length,
+        return max_sentence1_length, max_sentence2_length,\
             np.stack(s1_padded), np.stack(df["s1_len"]),\
             np.stack(s2_padded), np.stack(df["s2_len"]),\
             np.stack(df["l_int"])
