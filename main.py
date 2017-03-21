@@ -9,6 +9,7 @@ from src.models.attention import AttentionModel
 from src.models.wbw import WBWModel
 from src.models.mLSTM import mLSTMModel
 from src.models.chen import Chen
+from src.models.mpm import MPMatchingModel
 from src.utils.dataset import Dataset
 from src.utils.vocab import Vocab
 from src.utils.wvecs import get_glove_vectors
@@ -36,6 +37,7 @@ flags.DEFINE_float("max_grad_norm", 5., "The maxmium norm that gradients should 
 flags.DEFINE_string("activation", "tanh", "The activation to use in dense layers.")
 flags.DEFINE_string("dense_init", "xavier", "The initializer to use in dense layers.")
 flags.DEFINE_string("rec_init", "xavier", "The initializer to use in recurrent layers.")
+flags.DEFINE_integer("perspectives", 20, "The number of pespectives in multi-perspective matching layers")
 
 # Training
 flags.DEFINE_integer("batch_size", 100, "The batch size.")
@@ -121,6 +123,9 @@ def get_model(vocab):
         return mLSTMModel(**kwargs)
     elif FLAGS.model == "CHEN":
         return Chen(**kwargs)
+    elif FLAGS.model == "MPM":
+        kwargs["perspectives"] = FLAGS.perspectives
+        return MPMatchingModel(**kwargs)
     else:
         raise ValueError("Unrecognized model: %s." % FLAGS.model)
 
@@ -138,22 +143,26 @@ def run_eval_epoch(sess, model, dataset, split):
     batch_sizes = []
     accuracies = []
     preds = []
+    all_logits = np.array([]).reshape(0, 3)
 
     print "-"*79
     print "Evaluating on %s." % split
     prog = Progbar(target=dataset.split_num_batches(split, FLAGS.batch_size))
     for i, batch in enumerate(dataset.get_iterator(split, FLAGS.batch_size)):
-        acc, loss, pred = model.evaluate_on_batch(sess, *batch)
+        acc, loss, pred, logits = model.evaluate_on_batch(sess, *batch)
         prog.update(i + 1, [("%s loss" % split, loss)])
 
         batch_sizes.append(batch[0].shape[0])
         accuracies.append(acc)
         preds.append(pred)
+        print logits.shape
+        print all_logits.shape
+        all_logits = np.vstack([all_logits, logits])
 
     accuracy = np.average(accuracies, weights=batch_sizes)
     print "Accuracy: %s" % accuracy
     print "-"*79
-    return accuracy, np.concatenate(preds)
+    return accuracy, all_logits, np.concatenate(preds)
 
 def train(model, dataset):
     train_writer = tf.summary.FileWriter(train_log_dir)
@@ -165,7 +174,7 @@ def train(model, dataset):
         best_accuracy = 0
         for epoch in range(FLAGS.num_epochs):
             run_train_epoch(sess, model, dataset, train_writer, epoch)
-            dev_accuracy, _ = run_eval_epoch(sess, model, dataset, "train" if FLAGS.debug else "dev")
+            dev_accuracy, _, _ = run_eval_epoch(sess, model, dataset, "train" if FLAGS.debug else "dev")
             if dev_accuracy > best_accuracy and FLAGS.save:
                 saver.save(sess, checkpoint_path)
                 best_accuracy = dev_accuracy
@@ -177,13 +186,15 @@ def test(model, dataset, split):
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         saver.restore(sess, checkpoint_path)
-        _, preds = run_eval_epoch(sess, model, dataset, split)
+        _, logits, preds = run_eval_epoch(sess, model, dataset, split)
 
         save_path = os.path.join(results_dir, "predictions_%s.txt" % split)
         np.savetxt(save_path, preds)
         np_save_path = os.path.join(results_dir, "predictions_%s.npy" % split)
         np.save(np_save_path, preds)
-
+        np_save_path2 = os.path.join(results_dir, "logits_%s.npy" % split)
+        np.save(np_save_path2, logits)
+        
 def main(_):
     with tf.Graph().as_default():
         print "Vocab"
