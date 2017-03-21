@@ -70,8 +70,7 @@ class Chen(SNLIModel):
         with tf.variable_scope(scope):
             prem_hiddens = add_null_vector(prem_hiddens)
             hyp_hiddens = add_null_vector(hyp_hiddens)
-            w = tf.get_variable("w", shape=[self._hidden_size, self._hidden_size], regularizer=reg, initializer=tf.contrib.layers.xavier_initializer())
-            prem_hiddens_ = prem_hiddens * tf.expand_dims(tf.expand_dims(w, axis=0), axis=0)
+            prem_hiddens_ = tf.layers.dense(prem_hiddens, 2 * self._hidden_size, kernel_initializer=self.dense_init, kernel_regularizer=reg, use_bias=False, name="bilin")
             A = tf.einsum("aij,ajk->aik", prem_hiddens_, tf.transpose(hyp_hiddens, perm=[0, 2, 1]))
             beta_weights, alpha_weights = two_way_masked_sequence_softmax(
                 A, self.sentence1_lens_placeholder + 1, self.sentence2_lens_placeholder + 1
