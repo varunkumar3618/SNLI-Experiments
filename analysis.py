@@ -88,6 +88,35 @@ def error_report(vocab, dataset):
         for i in range(3):
             outf.write("%s: %.2f\n" % (dataset.int_to_label(i), accuracy[i]))
 
+def attention_report(vocab, dataset):
+    sentence1s = dataset.get_sentence1(FLAGS.split)
+    attention1s = np.load(os.path.join(results_dir, "attention_%s.npy" % FLAGS.split))
+    sentence = sentence1s[FLAGS.sentence_index]
+    attention = attention1s[FLAGS.sentence_index]
+
+    print "Sentence:", sentence
+    print "Attention:", attention
+
+    fig, ax = plt.subplots()
+
+    # TODO: Figure out the proper attention vector and truncate it to its sentence length.
+    # Set to capture the first 15 words and look in the first batch by default right now.
+    heatmap = ax.pcolor(attention, cmap=mpl.cm.Blues)
+
+    # put the major ticks at the middle of each cell
+    ax.set_xticks(np.arange(15) + 0.5, minor=False)
+    ax.set_yticks([])
+
+    # want a more natural, table-like display
+    ax.set_aspect('equal') # X scale matches Y scale
+    ax.invert_yaxis()
+    ax.xaxis.tick_top()
+
+    ax.set_xticklabels(sentence.split(" "), rotation="vertical")
+    ax.set_yticklabels([])
+
+    plt.savefig(FLAGS.analysis_path)
+
 def main(_):
     vocab = Vocab(snli_dir, vocab_file)
     dataset = Dataset(snli_dir, regular_data_file, debug_data_file, vocab,
@@ -97,6 +126,8 @@ def main(_):
         confusion(vocab, dataset)
     elif FLAGS.analysis_type == "error_report":
         error_report(vocab, dataset)
+    elif FLAGS.analysis_type == "attention":
+        attention_report(vocab, dataset)
     else:
         raise ValueError("Unrecognized analysis: %s" % FLAGS.analysis_type)
 
