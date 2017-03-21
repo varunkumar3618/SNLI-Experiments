@@ -10,6 +10,7 @@ import sklearn.metrics
 
 from src.utils.dataset import Dataset
 from src.utils.vocab import Vocab
+from src.utils.heatmap import plot_heatmap
 
 """
 Script for performing data analysis of model results. Example invocations:
@@ -153,30 +154,13 @@ def attention_report(vocab, dataset):
 
     premise_sentence = sentence1s[FLAGS.sentence_index]
     hypothesis_sentence = sentence2s[FLAGS.sentence_index]
-    premise_sentence_len = len(premise_sentence.split(" "))
     attention = attentions[FLAGS.sentence_index]
 
-    fig, ax = plt.subplots()
-
-    # TODO: Figure out why some sentences have extra nonzero attention weights.
-    # This may be intended behavior; perhaps punctuation counts as a token.
     print "Premise:", premise_sentence
     print "Hypothesis:", hypothesis_sentence
     print "Attention:", attention
-    heatmap = ax.pcolor([attention[1 : premise_sentence_len + 1]], cmap=mpl.cm.Blues)
 
-    # put the major ticks at the middle of each cell
-    ax.set_xticks(np.arange(premise_sentence_len)+0.5, minor=False)
-    ax.set_yticks([])
-
-    ax.set_aspect('equal') # X scale matches Y scale
-    ax.xaxis.tick_bottom()
-    ax.set_title("Hypothesis: %s" % hypothesis_sentence)
-
-    ax.set_xticklabels(premise_sentence.split(" "), rotation="vertical")
-    ax.set_yticklabels([])
-
-    plt.savefig(FLAGS.analysis_path)
+    plot_heatmap(premise_sentence, hypothesis_sentence, attention, FLAGS.analysis_path)
 
 
 def main(_):

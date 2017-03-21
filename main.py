@@ -14,6 +14,7 @@ from src.utils.dataset import Dataset
 from src.utils.vocab import Vocab
 from src.utils.wvecs import get_glove_vectors
 from src.utils.progbar import Progbar
+from src.utils.heatmap import plot_heatmap
 
 flags = tf.app.flags
 flags.DEFINE_string("model", "SOW", "The type of model to train.")
@@ -155,7 +156,7 @@ def run_eval_epoch(sess, model, dataset, split):
         batch_sizes.append(batch[0].shape[0])
         accuracies.append(acc)
         preds.append(pred)
-        
+
         if attn is not None:  # only for attentive models
             if attns.ndim==2 and len(attn.shape) == 3:
                 attns = np.array([]).reshape(0, FLAGS.max_seq_len, FLAGS.max_seq_len + 1)
@@ -226,7 +227,10 @@ def predict_user_input(model, dataset, vocab):
 
         print "Prediction:", dataset.int_to_label(pred[0])
         if attn is not None:
-            print "Attention:", attn  # TODO: pyplot heatmap
+            print "Attention:", attn[0]
+            print attn[0].shape
+            np.savetxt("attention-weights-{}.txt".format(FLAGS.name), attn[0].T)  # TODO: resolve this transpose
+            plot_heatmap(raw_prem, raw_hyp, attn[0], "attention-{}.png".format(FLAGS.name))  # TODO: use a file output flag
 
 def main(_):
     with tf.Graph().as_default():
