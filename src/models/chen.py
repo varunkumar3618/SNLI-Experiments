@@ -64,7 +64,9 @@ class Chen(SNLIModel):
 
     def attention(self, x, y, scope):
         with tf.variable_scope(scope):
-            E = tf.exp(tf.einsum("aij,ajk->aik", x, tf.transpose(y, perm=[0, 2, 1])))
+            A = tf.einsum("aij,ajk->aik", x, tf.transpose(y, perm=[0, 2, 1]))
+            E = tf.exp(A)
+            attn = tf.nn.softmax(A, dim=1)  # attention weights hyp->prem
 
             Num_beta = tf.einsum("aij,ajk->aik", E, y)
             Den_beta = tf.reduce_sum(E, axis=2)
@@ -73,7 +75,7 @@ class Chen(SNLIModel):
             Num_alpha = tf.einsum("aij,aik->ajk", E, x)
             Den_alpha = tf.reduce_sum(E, axis=1)
             alpha = Num_alpha / tf.expand_dims(Den_alpha, axis=2)
-        return beta, alpha
+        return beta, alpha, attn
 
     def collection(self, prem_hiddens, prem_tilda, hyp_hiddens, hyp_tilda):
         def make_collection(x, x_tilda):
@@ -114,7 +116,7 @@ class Chen(SNLIModel):
         with tf.variable_scope("prediction"):
             prem_embed, hyp_embed = self.embedding()
             prem_hiddens, _, hyp_hiddens, _ = self.encoding(prem_embed, hyp_embed, "encoding")
-            prem_tilda, hyp_tilda = self.attention(prem_hiddens, hyp_hiddens, "attention")
+            prem_tilda, hyp_tilda, attn = self.attention(prem_hiddens, hyp_hiddens, "attention")
             prem_m, hyp_m = self.collection(prem_hiddens, prem_tilda, hyp_hiddens, hyp_tilda)
             prem_composed, _, hyp_composed, _ = self.encoding(prem_m, hyp_m, "composition")
             prem_avg_pool, prem_max_pool, hyp_avg_pool, hyp_max_pool\

@@ -138,22 +138,28 @@ def run_eval_epoch(sess, model, dataset, split):
     batch_sizes = []
     accuracies = []
     preds = []
+    attns = np.array([]).reshape(0, FLAGS.max_seq_len)
 
     print "-"*79
     print "Evaluating on %s." % split
     prog = Progbar(target=dataset.split_num_batches(split, FLAGS.batch_size))
     for i, batch in enumerate(dataset.get_iterator(split, FLAGS.batch_size)):
-        acc, loss, pred = model.evaluate_on_batch(sess, *batch)
+        acc, loss, pred, attn = model.evaluate_on_batch(sess, *batch)
         prog.update(i + 1, [("%s loss" % split, loss)])
 
         batch_sizes.append(batch[0].shape[0])
         accuracies.append(acc)
         preds.append(pred)
 
+        if attn is not None:  # only for attentive models
+            if attns.ndim==2 and len(attn.shape) == 3:
+                attns = np.array([]).reshape(0, FLAGS.max_seq_len, FLAGS.max_seq_len + 1)
+            attns = np.vstack([attns, attn])
+
     accuracy = np.average(accuracies, weights=batch_sizes)
     print "Accuracy: %s" % accuracy
     print "-"*79
-    return accuracy, np.concatenate(preds)
+    return accuracy, np.concatenate(preds), attns
 
 def train(model, dataset):
     train_writer = tf.summary.FileWriter(train_log_dir)
@@ -165,7 +171,7 @@ def train(model, dataset):
         best_accuracy = 0
         for epoch in range(FLAGS.num_epochs):
             run_train_epoch(sess, model, dataset, train_writer, epoch)
-            dev_accuracy, _ = run_eval_epoch(sess, model, dataset, "train" if FLAGS.debug else "dev")
+            dev_accuracy, _, _ = run_eval_epoch(sess, model, dataset, "train" if FLAGS.debug else "dev")
             if dev_accuracy > best_accuracy and FLAGS.save:
                 saver.save(sess, checkpoint_path)
                 best_accuracy = dev_accuracy
@@ -177,12 +183,46 @@ def test(model, dataset, split):
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         saver.restore(sess, checkpoint_path)
-        _, preds = run_eval_epoch(sess, model, dataset, split)
+        _, preds, attns = run_eval_epoch(sess, model, dataset, split)
 
         save_path = os.path.join(results_dir, "predictions_%s.txt" % split)
         np.savetxt(save_path, preds)
         np_save_path = os.path.join(results_dir, "predictions_%s.npy" % split)
         np.save(np_save_path, preds)
+
+        # Save attention weights, if applicable.
+        if attns is not None:
+            # attns_save_path = os.path.join(results_dir, "attention_%s.txt" % split)
+            # np.savetxt(attns_save_path, attns)
+            np_attns_save_path = os.path.join(results_dir, "attention_%s.npy" % split)
+            np.save(np_attns_save_path, attns)
+
+def predict_user_input(model, dataset, vocab):
+    saver = tf.train.Saver()
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        sess.run(tf.local_variables_initializer())
+        saver.restore(sess, checkpoint_path)
+
+        def process_sentence(sentence):
+            seq = vocab.ids_for_sentence(sentence)
+            return np.pad(seq, (0, model._max_seq_len - len(seq)), "constant"), \
+                len(seq)
+
+        # Collect user input
+        while True:
+            raw_prem = raw_input("Premise: ")
+            raw_hyp = raw_input("Hypothesis: ")
+
+            prem, prem_len = process_sentence(raw_prem)
+            hyp, hyp_len = process_sentence(raw_hyp)
+
+            # Report prediction
+            pred, attn = model.predict_on_batch(sess, [prem], [prem_len], [hyp], [hyp_len])
+
+            print "Prediction:", dataset.int_to_label(pred[0])
+            if attn is not None:
+                print "Attention:", attn  # TODO: pyplot heatmap
 
 def main(_):
     with tf.Graph().as_default():
@@ -202,6 +242,8 @@ def main(_):
             test(model, dataset, "dev")
         elif FLAGS.mode == "test":
             test(model, dataset, "test")
+        elif FLAGS.mode == "interactive":  # predict on custom input
+            predict_user_input(model, dataset, vocab)
         else:
             raise ValueError("Unrecognized mode: %s." % FLAGS.mode)
 
