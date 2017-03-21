@@ -46,15 +46,6 @@ class Dataset(object):
             df["s1_len"] = df["s1_indices"].apply(lambda seq: min(len(seq), max_seq_length))
             df["s2_len"] = df["s2_indices"].apply(lambda seq: min(len(seq), max_seq_length))
 
-            def pad_fn(seq):
-                if len(seq) > max_seq_length:
-                    print "WARNING: some sequences will be truncated."
-                    return seq[:max_seq_length]
-                else:
-                    return np.pad(seq, (0, max_seq_length - len(seq)), "constant")
-            df["s1_padded"] = df["s1_indices"].apply(pad_fn)
-            df["s2_padded"] = df["s2_indices"].apply(pad_fn)
-
             # Covert the label to an integer
             labels_to_ints = {"entailment": 0, "neutral": 1, "contradiction": 2}
             df["l_int"] = df["gold_label"].apply(lambda l: np.array(labels_to_ints[l], dtype=np.int64))
@@ -77,8 +68,23 @@ class Dataset(object):
 
     def _make_batch(self, df):
         # The sequence lengths are required in order to use Tensorflow's dynamic rnn functions correctly
-        return np.stack(df["s1_padded"]), np.stack(df["s1_len"]),\
-            np.stack(df["s2_padded"]), np.stack(df["s2_len"]),\
+        def pad_fn(seq, max_seq_length):
+            if len(seq) > max_seq_length:
+                print "WARNING: some sequences will be truncated."
+                return seq[:max_seq_length]
+            else:
+                return np.pad(seq, (0, max_seq_length - len(seq)), "constant")
+
+        max_sentence1_length = df["s1_len"].max()
+        max_sentence2_length = df["s2_len"].max()
+        print max_sentence1_length, max_sentence2_length
+
+        s1_padded = df["s1_indices"].apply(lambda s1: pad_fn(s1, max_sentence1_length))
+        s2_padded = df["s2_indices"].apply(lambda s2: pad_fn(s2, max_sentence2_length))
+
+        return max_sentence1_length, max_sentence2_length,
+            np.stack(s1_padded), np.stack(df["s1_len"]),\
+            np.stack(s2_padded), np.stack(df["s2_len"]),\
             np.stack(df["l_int"])
 
     def _make_iterator(self, df, batch_size):

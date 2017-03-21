@@ -24,13 +24,12 @@ class SNLIModel(object):
     We use various Model classes as usual abstractions to encapsulate tensorflow
     computational graphs.
     """
-    def __init__(self, learning_rate, max_seq_len,
+    def __init__(self, learning_rate,
                  activation, dense_init, rec_init,
                  missing_indices, embedding_matrix, embedding_train_mode,
                  use_lens=False,
                  dropout_rate=-1, use_dropout=False,
                  clip_gradients=False, max_grad_norm=-1):
-        self._max_seq_len = max_seq_len
         self._use_lens = use_lens
         self._use_dropout = use_dropout
         self._dropout_rate = dropout_rate
@@ -75,9 +74,14 @@ class SNLIModel(object):
         See for more information:
         https://www.tensorflow.org/versions/r0.7/api_docs/python/io_ops.html#placeholders
         """
+        self.sentence1_max_len_placeholder = tf.placeholder(tf.int64, name="labels")
+        self.sentence2_max_len_placeholder = tf.placeholder(tf.int64, name="labels")
+
         self.labels_placeholder = tf.placeholder(tf.int64, shape=[None], name="labels")
-        self.sentence1_placeholder = tf.placeholder(tf.int64, shape=[None, self._max_seq_len], name="sentence1")
-        self.sentence2_placeholder = tf.placeholder(tf.int64, shape=[None, self._max_seq_len], name="sentence2")
+        self.sentence1_placeholder = tf.placeholder(tf.int64, shape=[None, self.sentence1_max_len_placeholder],
+                                                    name="sentence1")
+        self.sentence2_placeholder = tf.placeholder(tf.int64, shape=[None, self.sentence2_max_len_placeholder],
+                                                    name="sentence2")
 
         if self._use_lens:
             self.sentence1_lens_placeholder = tf.placeholder(tf.int64, shape=[None], name="sentence1_lengths")
@@ -87,6 +91,7 @@ class SNLIModel(object):
             self.dropout_placeholder = tf.placeholder(tf.float32)
 
     def create_feed_dict(self,
+                         sentence1_max_len, sentence2_max_len,
                          sentence1_batch, sentence1_lens_batch,
                          sentence2_batch, sentence2_lens_batch,
                          labels_batch=None, is_training=True):
@@ -113,6 +118,8 @@ class SNLIModel(object):
             feed_dict: The feed dictionary mapping from placeholders to values.
         """
         feed_dict = {}
+        feed_dict[self.sentence1_max_len_placeholder] = sentence1_max_len
+        feed_dict[self.sentence2_max_len_placeholder] = sentence2_max_len
         feed_dict[self.sentence1_placeholder] = sentence1_batch
         feed_dict[self.sentence2_placeholder] = sentence2_batch
 

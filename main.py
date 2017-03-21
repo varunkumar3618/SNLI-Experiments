@@ -24,7 +24,6 @@ flags.DEFINE_string("name", "model", "The name of the model, used to save logs a
 flags.DEFINE_string("glove_type", "common", "The source of the Glove word vectors used: one of 'wiki' and 'common'")
 
 # Data
-flags.DEFINE_integer("max_seq_len", 100, "The maximum length of a sentence. Sentences longer than this will be truncated.")
 flags.DEFINE_string("embedding_train_mode", "unseen", "Which glove vectors to train, one of 'all', 'unseen' and 'none'")
 
 # Model
@@ -98,7 +97,6 @@ def get_model(vocab):
         "embedding_train_mode": FLAGS.embedding_train_mode,
         "hidden_size": FLAGS.hidden_size,
         "l2_reg": FLAGS.l2_reg,
-        "max_seq_len": FLAGS.max_seq_len,
         "dropout_rate": FLAGS.dropout_rate,
         "learning_rate": FLAGS.learning_rate,
         "clip_gradients": FLAGS.clip_gradients,
