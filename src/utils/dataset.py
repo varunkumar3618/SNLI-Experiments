@@ -9,26 +9,26 @@ import numpy as np
 
 class Dataset(object):
     def __init__(self, snli_dir, regular_data_file, debug_data_file, vocab,
-                 max_seq_length, debug=False):
+                 debug=False):
         data_file = debug_data_file if debug else regular_data_file
         if os.path.isfile(data_file)\
-                and self._file_is_valid(data_file, vocab, max_seq_length, debug):
+                and self._file_is_valid(data_file, vocab, debug):
             with open(data_file, "r") as f:
                 self._dataframes = pickle.load(f)[0]
             print "Loading data from the pickled file..."
         else:
             self._dataframes = self._create_dataframes(snli_dir, data_file, vocab,
-                                                       max_seq_length, debug)
+                                                       debug)
             print "Pickling the data object..."
             with open(data_file, "wb") as f:
-                pickle.dump((self._dataframes, max_seq_length, debug), f)
+                pickle.dump((self._dataframes, debug), f)
 
-    def _file_is_valid(self, data_file, vocab, max_seq_length, debug):
+    def _file_is_valid(self, data_file, vocab, debug):
         with open(data_file, "r") as f:
-            _, max_seq_length_, debug_ = pickle.load(f)
-            return max_seq_length == max_seq_length and debug == debug_
+            _, debug_ = pickle.load(f)
+            return debug == debug_
 
-    def _create_dataframes(self, snli_dir, data_file, vocab, max_seq_length, debug=False):
+    def _create_dataframes(self, snli_dir, data_file, vocab, debug=False):
         dataframes = {}
         for split in ["train", "dev", "test"]:
             filepath = os.path.join(snli_dir, "snli_1.0_%s.jsonl" % split)
@@ -43,8 +43,8 @@ class Dataset(object):
             # Tokenize the sentences, convert the tokens to indices, and pad the sequences
             df["s1_indices"] = df["sentence1"].apply(lambda s1: vocab.ids_for_sentence(s1))
             df["s2_indices"] = df["sentence2"].apply(lambda s1: vocab.ids_for_sentence(s1))
-            df["s1_len"] = df["s1_indices"].apply(lambda seq: min(len(seq), max_seq_length))
-            df["s2_len"] = df["s2_indices"].apply(lambda seq: min(len(seq), max_seq_length))
+            df["s1_len"] = df["s1_indices"].apply(lambda seq: len(seq))
+            df["s2_len"] = df["s2_indices"].apply(lambda seq: len(seq))
 
             # Covert the label to an integer
             labels_to_ints = {"entailment": 0, "neutral": 1, "contradiction": 2}

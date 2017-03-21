@@ -193,7 +193,7 @@ def main(_):
         vocab = Vocab(snli_dir, vocab_file)
         print "Dataset"
         dataset = Dataset(snli_dir, regular_data_file, debug_data_file, vocab,
-                          FLAGS.max_seq_len, debug=FLAGS.debug)
+                          debug=FLAGS.debug)
 
         print "Model"
         model = get_model(vocab)
