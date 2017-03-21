@@ -265,7 +265,7 @@ class SNLIModel(object):
 
     def build(self):
         self.add_placeholders()
-        self.pred, self.logits = self.add_prediction_op()
+        self.pred, self.logits, self.attn = self.add_prediction_op()
         self.loss = self.add_loss_op(self.pred, self.logits)
         self.train_op = self.add_training_op(self.loss)
         self.acc_op = self.add_acc_op(self.pred)

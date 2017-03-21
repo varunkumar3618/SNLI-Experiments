@@ -123,4 +123,4 @@ class Chen(SNLIModel):
                 = self.pooling(prem_composed, hyp_composed)
             h_star = tf.concat([prem_avg_pool, prem_max_pool, hyp_avg_pool, hyp_max_pool], axis=1)
             preds, logits = self.classification(h_star)
-        return preds, logits
+        return preds, logits, attn
